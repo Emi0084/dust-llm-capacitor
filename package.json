@@ -1,5 +1,5 @@
 {
-  "name": "@dust/llm-capacitor",
+  "name": "dust-llm-capacitor",
   "version": "0.1.0",
   "description": "Capacitor plugin for on-device llama.cpp model loading over GGUF files.",
   "main": "dist/esm/index.js",
@@ -47,12 +47,12 @@
   "license": "MIT",
   "peerDependencies": {
     "@capacitor/core": "^7.0.0 || ^8.0.0",
-    "@dust/core-capacitor": ">=0.1.0"
+    "dust-core-capacitor": ">=0.1.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
     "@capacitor/core": "^8.0.0",
-    "@dust/core-capacitor": "^0.1.0",
+    "dust-core-capacitor": "^0.1.0",
     "typescript": "~5.7.0"
   },
   "engines": {
