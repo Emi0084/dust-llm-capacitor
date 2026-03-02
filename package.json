@@ -32,7 +32,7 @@
     "android/src/main/",
     "android/build.gradle",
     "ios/Sources/",
-    "DustCapacitorLlm.podspec",
+    "DustLlmCapacitor.podspec",
     "Package.swift",
     ".gitmodules"
   ],
