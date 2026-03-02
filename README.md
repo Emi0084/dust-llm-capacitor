@@ -59,16 +59,22 @@ This is the **Capacitor bridge layer** — it translates JavaScript API calls in
     <th align="center">iOS</th>
   </tr>
   <tr>
-    <td>
-      <video src="android-qwen-e2e-clip.mp4" autoplay loop muted playsinline width="320"
-        aria-label="Qwen LLM on Android"></video>
+    <td align="center">
+      <a href="android-qwen-e2e-clip.mp4"><img src="android-qwen-e2e-thumb.jpg" width="320" alt="Qwen LLM on Android — click to play"></a>
     </td>
-    <td>
-      <video src="ios-qwen-e2e-clip.mp4" autoplay loop muted playsinline width="320"
-        aria-label="Qwen LLM on iOS"></video>
+    <td align="center">
+      <a href="ios-qwen-e2e-clip.mp4"><img src="ios-qwen-e2e-thumb.jpg" width="320" alt="Qwen LLM on iOS — click to play"></a>
     </td>
   </tr>
 </table>
+
+**Run this demo in 3 commands:**
+
+```bash
+git clone https://github.com/rogelioRuiz/dust-llm-capacitor && cd dust-llm-capacitor/example
+npm install && npx cap sync
+npm run test:android   # or: npm run test:ios
+```
 
 ## Install
 
