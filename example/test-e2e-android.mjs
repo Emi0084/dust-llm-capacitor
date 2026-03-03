@@ -30,7 +30,7 @@ const BUNDLE_ID         = 'io.t6x.llmchat'
 const RUNNER_PORT       = 8099
 const TOTAL_TESTS       = 14
 const TIMEOUT_MS        = 1_200_000  // 20 min — model loading is slow on emulator
-const ADB               = process.env.ADB_PATH || 'adb'
+const ADB               = findAdbBinary()
 const MODEL_NAME        = 'Qwen3.5-2B-Q4_K_M.gguf'
 const MODEL_URL         = 'https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/Qwen3.5-2B-Q4_K_M.gguf'
 const MODEL_DIR         = path.join(ROOT_DIR, 'test/models')
@@ -94,6 +94,21 @@ function findEmulatorBinary() {
   }
   try { return execSync('which emulator', { encoding: 'utf8' }).trim() } catch {}
   return null
+}
+
+function findAdbBinary() {
+  if (process.env.ADB_PATH && fs.existsSync(process.env.ADB_PATH)) return process.env.ADB_PATH
+  const candidates = [
+    process.env.ANDROID_HOME && path.join(process.env.ANDROID_HOME, 'platform-tools/adb'),
+    process.env.ANDROID_SDK_ROOT && path.join(process.env.ANDROID_SDK_ROOT, 'platform-tools/adb'),
+    path.join(process.env.HOME, 'Library/Android/sdk/platform-tools/adb'),   // macOS default
+    path.join(process.env.HOME, 'Android/Sdk/platform-tools/adb'),           // Linux default
+  ].filter(Boolean)
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p
+  }
+  try { return execSync('which adb', { encoding: 'utf8' }).trim() } catch {}
+  return 'adb'  // last resort — will fail with a clear shell error
 }
 
 function getAvailableAVDs(emulatorBin) {
@@ -329,7 +344,7 @@ async function main() {
     })
     pass('1.2 Android project synced')
 
-    console.log('  → Building APK (./gradlew assembleDebug)...')
+    console.log('  → Building APK (./gradlew assembleDebug)… (use --verbose for build output)')
     run('./gradlew assembleDebug', { cwd: path.join(__dirname, 'android'), ...(VERBOSE && { stdio: [0, 1, 2] }) })
     if (!fs.existsSync(apkPath)) throw new Error('APK not found after build')
     const apkSize = Math.round(fs.statSync(apkPath).size / 1024 / 1024)

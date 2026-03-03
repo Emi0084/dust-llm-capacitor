@@ -335,8 +335,11 @@ async function main() {
     )
     pass('1.3 xcodebuild succeeded')
   } catch (err) {
-    const lines = (err.stderr || err.stdout || err.message || '').split('\n')
-    const errorLines = lines.filter(l => l.includes('error:')).slice(0, 3).join(' | ')
+    const output = (err.stdout || err.stderr || err.message || '')
+    const lines = output.split('\n')
+    const errorLines = lines.filter(l => /error:|FAILED/.test(l)).slice(0, 5).join(' | ')
+      || lines.filter(Boolean).slice(-10).join(' | ')
+      || err.message?.slice(0, 300)
     fail('1.3 xcodebuild succeeded', errorLines || 'build failed')
     process.exit(1)
   }

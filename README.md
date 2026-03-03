@@ -8,7 +8,7 @@
 
 <p align="center">
   <strong>Device Unified Serving Toolkit</strong><br>
-  <a href="https://github.com/rogelioRuiz/dust">dust ecosystem</a> · v0.2.1 · Apache 2.0
+  <a href="https://github.com/rogelioRuiz/dust">dust ecosystem</a> · v0.2.2 · Apache 2.0
 </p>
 
 <p align="center">
@@ -72,10 +72,12 @@ This is the **Capacitor bridge layer** — it translates JavaScript API calls in
 **Run this demo in 3 commands:**
 
 ```bash
-git clone https://github.com/rogelioRuiz/dust-llm-capacitor && cd dust-llm-capacitor/example
-npm install && npx cap sync
+git clone https://github.com/rogelioRuiz/dust-llm-capacitor && cd dust-llm-capacitor
+npm install
 npm run test:android   # or: npm run test:ios
 ```
+
+> First run downloads the Qwen 3.5 2B model (~1.3 GB) automatically and caches it in `test/models/`.
 
 ## Install
 
@@ -313,7 +315,7 @@ await LLM.clearHistory({ modelId: 'my-model' });
 | Node.js | >= 20 | `npm install` / TypeScript build |
 | Xcode | with iOS Simulator SDK | iOS builds (macOS only) |
 | Java JDK | 17 | Android compile (`JavaVersion.VERSION_17`) |
-| Android SDK | compileSdk 36 (minSdk 26) | Android Studio or command-line SDK |
+| Android SDK | compileSdk 36 (minSdk 28) | Android Studio or command-line SDK |
 
 ### Clone and build
 
@@ -410,7 +412,7 @@ node test-e2e-android.mjs
 - Download [Qwen 3.5 2B](https://huggingface.co/unsloth/Qwen3.5-2B-GGUF) Q4_K_M (~1.3 GB) or [Qwen 3.5 2B 8-bit MLX](https://huggingface.co/mlx-community/Qwen3.5-2B-8bit) (~2.6 GB), cached in `test/models/`
 - `cap add ios` / `cap add android` if platform directory is missing
 - iOS: patch deployment target to 16.0 (GGUF) or 17.0 (MLX), SPM resolution
-- Android: patch Kotlin Gradle plugin, minSdk 26, cleartext HTTP for localhost
+- Android: patch Kotlin Gradle plugin, minSdk 28, cleartext HTTP for localhost
 - `cap sync`, native build (`xcodebuild` / `gradlew assembleDebug`)
 - App install, model deployment to simulator/device, HTTP result collection
 
