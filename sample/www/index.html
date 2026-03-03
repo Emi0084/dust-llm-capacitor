@@ -710,7 +710,7 @@
 
     <main id="messages-shell">
       <div id="messages">
-        <div id="welcome-state" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;opacity:0.5;padding:40px 20px;text-align:center;">
+        <div id="welcome-state" class="hidden" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;opacity:0.5;padding:40px 20px;text-align:center;">
           <div style="font-size:2rem;margin-bottom:4px;">&#x2728;</div>
           <div style="font-size:0.92rem;color:var(--muted-foreground);">Model ready. Ask anything.</div>
         </div>
@@ -1167,6 +1167,10 @@
         setModelLabel(state.metadata.name || state.modelId)
         setComposerEnabled(true)
         setStatus('ready', 'Ready')
+
+        // Show welcome state now that model is actually loaded
+        var welcome = document.getElementById('welcome-state')
+        if (welcome) welcome.classList.remove('hidden')
       }
 
       /* ─── Download + Load combined flow ─────────────────────────────────── */
@@ -1189,12 +1193,25 @@
         try {
           var absolutePath = MODEL_PATH || await resolveModelAbsolutePath()
           MODEL_PATH = absolutePath
-          setDownloadBtnState(true, 'Loading model...')
-          setDownloadStatus('loading', 'Loading model...')
+
+          // Skip download screen — go straight to chat with loading state
+          els.downloadScreen.classList.add('hidden')
+          els.chatUi.classList.remove('hidden')
+          setModelLabel('Loading model...')
+          setStatus('loading', 'Loading')
+
           await loadModelFromPath(absolutePath)
-          await transitionToChat()
+
+          setModelLabel(state.metadata.name || state.modelId)
+          setComposerEnabled(true)
+          setStatus('ready', 'Ready')
+
+          // Show welcome state now that model is actually loaded
+          var welcome = document.getElementById('welcome-state')
+          if (welcome) welcome.classList.remove('hidden')
         } catch (error) {
-          setDownloadError(error.message || 'Load failed')
+          setModelLabel('Load failed')
+          setStatus('error', error.message || 'Load failed')
           throw error
         }
       }
