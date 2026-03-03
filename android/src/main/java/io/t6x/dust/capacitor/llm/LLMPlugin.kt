@@ -73,7 +73,7 @@ class LLMPlugin : Plugin(), ComponentCallbacks2 {
 
         val configObject = call.getObject("config")
         val config = LLMConfig(
-            nGpuLayers = configObject?.getInteger("nGpuLayers") ?: 0,
+            nGpuLayers = configObject?.getInteger("nGpuLayers") ?: -1,
             contextSize = configObject?.getInteger("contextSize") ?: 2048,
             batchSize = configObject?.getInteger("batchSize") ?: 512,
             mmprojPath = configObject?.getString("mmprojPath"),

@@ -9,7 +9,7 @@ android {
     namespace 'io.t6x.dust.capacitor.llm'
     compileSdk 36
     defaultConfig {
-        minSdkVersion 26
+        minSdkVersion 28
         targetSdkVersion 36
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -25,6 +25,6 @@ android {
 dependencies {
     implementation project(':capacitor-android')
     implementation project(':dust-core-capacitor')
-    api 'io.t6x.dust:dust-llm-kotlin:0.2.0'
+    api 'io.t6x.dust:dust-llm-kotlin:0.2.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0'
 }

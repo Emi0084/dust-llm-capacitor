@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="https://github.com/rogelioRuiz/dust/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/License-Apache_2.0-blue.svg"></a>
-  <img alt="Version" src="https://img.shields.io/badge/version-0.2.0-informational">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.2.2-informational">
   <img alt="npm" src="https://img.shields.io/badge/npm-dust--llm--capacitor-cb3837">
   <img alt="Capacitor" src="https://img.shields.io/badge/Capacitor-7%20%7C%208-119EFF">
   <img alt="GGUF" src="https://img.shields.io/badge/GGUF-llama.cpp-blueviolet">
@@ -97,7 +97,7 @@ dust-llm-capacitor/
 ├── ios/Sources/LLMPlugin/
 │   └── LLMPlugin.swift          # CAPPlugin bridge — 14 @objc methods, DustCore registry, memory warnings
 ├── android/
-│   ├── build.gradle             # depends on io.t6x.dust:dust-llm-kotlin:0.2.0
+│   ├── build.gradle             # depends on io.t6x.dust:dust-llm-kotlin:0.2.1
 │   └── src/main/java/io/t6x/dust/capacitor/llm/
 │       └── LLMPlugin.kt         # @CapacitorPlugin bridge — 14 @PluginMethod functions, coroutines, memory pressure
 └── test/
@@ -331,7 +331,7 @@ xcodebuild build \
 
 The Android module depends on `project(':capacitor-android')` and `project(':capacitor-core')`, which are resolved by the host Capacitor app's `settings.gradle`. This means the Android module **cannot be built standalone** — it must be built as part of a Capacitor app.
 
-Native dependencies (`io.t6x.dust:dust-llm-kotlin:0.2.0`, `io.t6x.dust:dust-core-kotlin:0.1.0`) are fetched from Maven Central automatically.
+Native dependencies (`io.t6x.dust:dust-llm-kotlin:0.2.1`, `io.t6x.dust:dust-core-kotlin:0.1.0`) are fetched from Maven Central automatically.
 
 To build in the context of a Capacitor app:
 
@@ -533,7 +533,7 @@ var result = await state.LLM.loadModel({
   descriptor: defaultDescriptor(),
   config: {
     contextSize: 512,    // raise for models that support larger contexts (e.g., 2048, 4096)
-    nGpuLayers: 0        // 0 = CPU-only (Android), -1 = auto Metal GPU (iOS)
+    nGpuLayers: -1       // -1 = auto GPU (Vulkan on Android, Metal on iOS), 0 = CPU-only
   }
 })
 ```
@@ -541,7 +541,7 @@ var result = await state.LLM.loadModel({
 | Config key | Default | What it does |
 |-----------|---------|-------------|
 | `contextSize` | 512 | Token window size. Higher = more conversation memory, but more RAM. Start low and increase. |
-| `nGpuLayers` | 0 | Number of layers offloaded to GPU. Use `-1` on iOS for full Metal acceleration. Android is CPU-only (`0`). |
+| `nGpuLayers` | -1 | Number of layers offloaded to GPU. `-1` = auto (Vulkan on Android, Metal on iOS). `0` = CPU-only. Devices without Vulkan 1.2+ fall back to CPU automatically. |
 | `batchSize` | (engine default) | Prompt processing batch size. Larger = faster prompt eval, more memory. |
 | `mmprojPath` | — | Path to a vision projector GGUF (required for multimodal models like LLaVA or Gemma 3n). |
 
@@ -563,7 +563,7 @@ Follow the same steps as above — `adb push` for Android, `cp` into the simulat
 
 **`contextSize` multiplies memory usage.** A 4096-token context uses ~4× the RAM of a 1024-token context for the KV cache. If the app is killed shortly after loading, try lowering `contextSize` before switching to a smaller model.
 
-**Android GPU offload is not available.** `nGpuLayers` must be `0` on Android. Setting it to `-1` or any positive value will fail. GPU inference (Metal) is iOS-only.
+**Android GPU requires Vulkan 1.2+.** Most 2019+ Android devices (Qualcomm Adreno, ARM Mali, Samsung Xclipse, Google Tensor) support this. Older devices and emulators without Vulkan 1.2 automatically fall back to CPU — no error, no crash. Set `nGpuLayers: 0` to force CPU-only.
 
 **`cap sync` may regenerate patched files.** If you manually patched the iOS deployment target or Android minSdk, running `cap sync` can overwrite your changes. Re-apply patches after syncing. The E2E test scripts handle this automatically, but manual runs require awareness.
 
@@ -574,14 +574,14 @@ Follow the same steps as above — `adb push` for Android, `cp` into the simulat
 | iOS | [dust-llm-swift](https://github.com/rogelioRuiz/dust-llm-swift) | SPM (`branch: "main"` — unsafeFlags restriction) |
 | iOS | [dust-core-swift](https://github.com/rogelioRuiz/dust-core-swift) | SPM (`from: "0.1.0"`) |
 | iOS | [dust-core-capacitor](https://github.com/rogelioRuiz/dust-core-capacitor) | SPM (`from: "0.1.0"`) |
-| Android | [dust-llm-kotlin](https://github.com/rogelioRuiz/dust-llm-kotlin) | Maven Central (`io.t6x.dust:dust-llm-kotlin:0.2.0`) |
+| Android | [dust-llm-kotlin](https://github.com/rogelioRuiz/dust-llm-kotlin) | Maven Central (`io.t6x.dust:dust-llm-kotlin:0.2.1`) |
 | Android | dust-core-kotlin | Transitive via dust-llm-kotlin |
 
 ## Platform differences
 
 | Aspect | iOS | Android |
 |--------|-----|---------|
-| GPU | Metal (`nGpuLayers: -1` = auto) | CPU-only (`nGpuLayers: 0`) |
+| GPU | Metal (`nGpuLayers: -1` = auto) | Vulkan (`nGpuLayers: -1` = auto, CPU fallback) |
 | Build system | SPM (Package.swift) or CocoaPods (podspec) | Gradle + Maven Central |
 | Native library | dust-llm-swift (compiles llama.cpp via SPM) | dust-llm-kotlin (compiles llama.cpp via CMake + NDK) |
 | Thread model | `DispatchQueue` | `HandlerThread` + coroutines |
