@@ -322,17 +322,30 @@ async function main() {
     console.log('  → Building (xcodebuild)… (use --verbose for build output)')
     const xcodeMajor = getXcodeMajorVersion()
     const explicitModulesFlag = xcodeMajor >= 26 ? ' SWIFT_ENABLE_EXPLICIT_MODULES=NO' : ''
-    execSync(
+    const buildCmd =
       `xcodebuild -scheme App -sdk iphonesimulator ` +
       `-destination "platform=iOS Simulator,id=${udid}" -configuration Debug build` +
-      explicitModulesFlag,
-      {
-        cwd: path.join(__dirname, 'ios/App'),
-        encoding: 'utf8',
-        timeout: 600_000,
-        stdio: VERBOSE ? [0, 1, 2] : ['ignore', 'pipe', 'pipe'],
+      explicitModulesFlag
+    const buildOpts = {
+      cwd: path.join(__dirname, 'ios/App'),
+      encoding: 'utf8',
+      timeout: 600_000,
+      stdio: VERBOSE ? [0, 1, 2] : ['ignore', 'pipe', 'pipe'],
+    }
+    // On a cold SPM checkout dust-llm-swift's llama.cpp submodule may not be
+    // fully initialized, causing 'llama.h not found' on the first build attempt.
+    // A single retry is enough — SPM finishes resolving on the second pass.
+    try {
+      execSync(buildCmd, buildOpts)
+    } catch (firstErr) {
+      const firstOut = (firstErr.stdout || firstErr.stderr || firstErr.message || '')
+      if (firstOut.includes('llama.h') || firstOut.includes('not found')) {
+        console.log('  → First build attempt failed (SPM submodule init), retrying…')
+        execSync(buildCmd, buildOpts)
+      } else {
+        throw firstErr
       }
-    )
+    }
     pass('1.3 xcodebuild succeeded')
   } catch (err) {
     const output = (err.stdout || err.stderr || err.message || '')
