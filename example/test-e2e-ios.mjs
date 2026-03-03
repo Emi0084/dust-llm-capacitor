@@ -326,65 +326,54 @@ async function main() {
       `xcodebuild -scheme App -sdk iphonesimulator ` +
       `-destination "platform=iOS Simulator,id=${udid}" -configuration Debug build` +
       explicitModulesFlag
-    const buildOpts = {
+    // Use a fixed derivedDataPath so resolve and build share the same
+    // SourcePackages/checkouts/ directory. Without this, xcodebuild may
+    // create a new checkout for the build step, discarding any submodule
+    // work done after the resolve step.
+    const derivedDataPath = path.join(__dirname, 'ios/App/DerivedData')
+    const sharedOpts = {
       cwd: path.join(__dirname, 'ios/App'),
       encoding: 'utf8',
       timeout: 600_000,
-      maxBuffer: 200 * 1024 * 1024,  // 200 MB — xcodebuild verbose output is large
+      maxBuffer: 200 * 1024 * 1024,
       stdio: VERBOSE ? [0, 1, 2] : ['ignore', 'pipe', 'pipe'],
     }
-    // Step 1: resolve SPM packages so Xcode fetches dust-llm-swift into
-    // DerivedData/SourcePackages/checkouts/ before we touch submodules.
+    const baseFlags =
+      `-scheme App -sdk iphonesimulator ` +
+      `-destination "platform=iOS Simulator,id=${udid}" ` +
+      `-derivedDataPath "${derivedDataPath}"`
+
+    // Step 1: resolve so SPM checks out dust-llm-swift into our fixed path.
     console.log('  → Resolving SPM dependencies…')
-    const resolveCmd =
-      `xcodebuild -scheme App -sdk iphonesimulator ` +
-      `-destination "platform=iOS Simulator,id=${udid}" -resolvePackageDependencies`
     try {
-      execSync(resolveCmd, buildOpts)
+      execSync(`xcodebuild ${baseFlags} -resolvePackageDependencies`, sharedOpts)
     } catch (_resolveErr) {
-      // Non-fatal: resolve may print warnings but still write the checkout
+      // Non-fatal: warnings are OK as long as the checkout dir was written
     }
 
-    // Step 2: initialize git submodules in the SPM checkout of dust-llm-swift.
-    // SPM fetches the repo but does NOT run `git submodule update`, so
-    // llama.cpp is missing → "missing target PACKAGE-TARGET:llama" at build time.
+    // Step 2: init llama.cpp submodule inside the checkout SPM just created.
+    // SPM clones the repo but never runs `git submodule update`, so llama.cpp
+    // is absent → "missing target PACKAGE-TARGET:llama" at compile time.
+    const checkoutsDir = path.join(derivedDataPath, 'SourcePackages/checkouts')
     try {
-      const checkoutsBase = execSync(
-        `find ~/Library/Developer/Xcode/DerivedData -maxdepth 5 -type d -name "checkouts" 2>/dev/null | head -1`,
-        { encoding: 'utf8', shell: true }
-      ).trim()
-      if (checkoutsBase) {
-        const dustLlmSwiftDir = execSync(
-          `find "${checkoutsBase}" -maxdepth 1 -type d -name "dust-llm-swift*" 2>/dev/null | head -1`,
-          { encoding: 'utf8', shell: true }
-        ).trim()
-        if (dustLlmSwiftDir) {
+      if (fs.existsSync(checkoutsDir)) {
+        const entries = fs.readdirSync(checkoutsDir)
+        const dustLlmDir = entries.find(e => e.startsWith('dust-llm-swift'))
+        if (dustLlmDir) {
+          const dustLlmPath = path.join(checkoutsDir, dustLlmDir)
           console.log('  → Initializing llama.cpp submodule…')
           execSync('git submodule update --init --recursive', {
-            cwd: dustLlmSwiftDir, encoding: 'utf8', timeout: 300_000,
+            cwd: dustLlmPath, encoding: 'utf8', timeout: 300_000,
             stdio: VERBOSE ? [0, 1, 2] : ['ignore', 'pipe', 'pipe'],
           })
-          // The resolvePackageDependencies step above wrote a build description
-          // (XCBuildData) that recorded llama as a missing target because the
-          // submodule wasn't present yet. Now that it is, delete the stale cache
-          // so xcodebuild regenerates the build graph from scratch.
-          try {
-            const xcbuildDataDir = execSync(
-              `find ~/Library/Developer/Xcode/DerivedData -maxdepth 3 -type d -name "XCBuildData" -path "*/App-*/*" 2>/dev/null | head -1`,
-              { encoding: 'utf8', shell: true }
-            ).trim()
-            if (xcbuildDataDir) {
-              fs.rmSync(xcbuildDataDir, { recursive: true, force: true })
-              console.log('  → Cleared stale XCBuildData cache')
-            }
-          } catch (_e) {}
         }
       }
     } catch (_subErr) {
-      // Non-fatal: if already initialized or not needed, build will succeed
+      // Non-fatal: already initialized or not needed
     }
 
-    execSync(buildCmd, buildOpts)
+    // Step 3: build using the same derivedDataPath — SPM won't re-clone.
+    execSync(`xcodebuild ${baseFlags} -configuration Debug build${explicitModulesFlag}`, sharedOpts)
     pass('1.3 xcodebuild succeeded')
   } catch (err) {
     const output = (err.stdout || err.stderr || err.message || '')
@@ -397,8 +386,9 @@ async function main() {
   // 1.4 Install to get container path
   let appPath
   try {
+    const fixedDerivedData = path.join(__dirname, 'ios/App/DerivedData')
     const ddOut = execSync(
-      `find ~/Library/Developer/Xcode/DerivedData -name "App.app" -path "*Debug-iphonesimulator*" -not -path "*PlugIns*" -exec stat -f '%m %N' {} \\; 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2-`,
+      `find "${fixedDerivedData}" ~/Library/Developer/Xcode/DerivedData -name "App.app" -path "*Debug-iphonesimulator*" -not -path "*PlugIns*" -exec stat -f '%m %N' {} \\; 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2-`,
       { encoding: 'utf8', shell: true }
     ).trim()
     appPath = ddOut
