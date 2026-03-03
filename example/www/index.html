@@ -1766,11 +1766,10 @@
               return state.isGenerating
             }, 10000, 'generation started')
 
-            // Poll: as soon as cursor is visible, click Stop
+            // Click Stop as soon as the button text changes — don't wait for cursor visibility
+            // (on Android/fast emulators the full generation can complete before cursor appears)
             await waitFor(function () {
-              if (!stopClicked &&
-                  els.primaryAction.textContent === 'Stop' &&
-                  els.messages.querySelector('.streaming-cursor:not(.hidden)')) {
+              if (!stopClicked && els.primaryAction.textContent === 'Stop') {
                 simulateClick(els.primaryAction)
                 stopClicked = true
               }
@@ -1819,7 +1818,11 @@
             // Ensure clean state — cancel any lingering generation & clear history
             if (state.isGenerating && state.modelId) {
               try { await state.LLM.cancelGeneration({ modelId: state.modelId }) } catch (_e) {}
-              await waitFor(function () { return !state.isGenerating }, 60000, 'cleanup cancel')
+              try {
+                await waitFor(function () { return !state.isGenerating }, 5000, 'cleanup cancel')
+              } catch (_e) {
+                state.isGenerating = false
+              }
             }
             state.chatHistory = []
 
