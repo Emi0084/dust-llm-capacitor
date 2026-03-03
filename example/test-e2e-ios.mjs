@@ -333,10 +333,8 @@ async function main() {
       maxBuffer: 200 * 1024 * 1024,  // 200 MB — xcodebuild verbose output is large
       stdio: VERBOSE ? [0, 1, 2] : ['ignore', 'pipe', 'pipe'],
     }
-    // Resolve SPM packages first — this ensures dust-llm-swift's llama.cpp
-    // submodule (and any other remote dependencies) are fully fetched before
-    // the compile step. Without this, a cold SPM checkout produces
-    // "missing target PACKAGE-TARGET:llama" on the first build.
+    // Step 1: resolve SPM packages so Xcode fetches dust-llm-swift into
+    // DerivedData/SourcePackages/checkouts/ before we touch submodules.
     console.log('  → Resolving SPM dependencies…')
     const resolveCmd =
       `xcodebuild -scheme App -sdk iphonesimulator ` +
@@ -344,8 +342,34 @@ async function main() {
     try {
       execSync(resolveCmd, buildOpts)
     } catch (_resolveErr) {
-      // Non-fatal: resolve may fail if already cached; build will surface real errors
+      // Non-fatal: resolve may print warnings but still write the checkout
     }
+
+    // Step 2: initialize git submodules in the SPM checkout of dust-llm-swift.
+    // SPM fetches the repo but does NOT run `git submodule update`, so
+    // llama.cpp is missing → "missing target PACKAGE-TARGET:llama" at build time.
+    try {
+      const checkoutsBase = execSync(
+        `find ~/Library/Developer/Xcode/DerivedData -maxdepth 5 -type d -name "checkouts" 2>/dev/null | head -1`,
+        { encoding: 'utf8', shell: true }
+      ).trim()
+      if (checkoutsBase) {
+        const dustLlmSwiftDir = execSync(
+          `find "${checkoutsBase}" -maxdepth 1 -type d -name "dust-llm-swift*" 2>/dev/null | head -1`,
+          { encoding: 'utf8', shell: true }
+        ).trim()
+        if (dustLlmSwiftDir) {
+          console.log('  → Initializing llama.cpp submodule…')
+          execSync('git submodule update --init --recursive', {
+            cwd: dustLlmSwiftDir, encoding: 'utf8', timeout: 300_000,
+            stdio: VERBOSE ? [0, 1, 2] : ['ignore', 'pipe', 'pipe'],
+          })
+        }
+      }
+    } catch (_subErr) {
+      // Non-fatal: if already initialized or not needed, build will succeed
+    }
+
     execSync(buildCmd, buildOpts)
     pass('1.3 xcodebuild succeeded')
   } catch (err) {
