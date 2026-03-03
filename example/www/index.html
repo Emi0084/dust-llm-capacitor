@@ -1754,7 +1754,7 @@
             state.chatHistory = []
             // Use more tokens so we have time to click Stop before generation finishes
             var savedMax = state.defaultMaxTokens
-            state.defaultMaxTokens = 30
+            state.defaultMaxTokens = 200
             simulateType('Write a very long detailed story about dragons and kingdoms')
 
             var stopClicked = false
