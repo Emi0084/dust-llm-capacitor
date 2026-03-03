@@ -319,7 +319,7 @@ async function main() {
 
   // 1.3 Initial build
   try {
-    console.log('  → Building (xcodebuild)...')
+    console.log('  → Building (xcodebuild)… (use --verbose for build output)')
     const xcodeMajor = getXcodeMajorVersion()
     const explicitModulesFlag = xcodeMajor >= 26 ? ' SWIFT_ENABLE_EXPLICIT_MODULES=NO' : ''
     execSync(
@@ -338,9 +338,7 @@ async function main() {
     const output = (err.stdout || err.stderr || err.message || '')
     const lines = output.split('\n')
     const errorLines = lines.filter(l => /error:|FAILED/.test(l)).slice(0, 5).join(' | ')
-      || lines.filter(Boolean).slice(-10).join(' | ')
-      || err.message?.slice(0, 300)
-    fail('1.3 xcodebuild succeeded', errorLines || 'build failed')
+    fail('1.3 xcodebuild succeeded', errorLines || 'build failed — re-run with --verbose for full xcodebuild output')
     process.exit(1)
   }
 
