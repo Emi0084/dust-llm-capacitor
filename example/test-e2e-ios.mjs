@@ -333,18 +333,13 @@ async function main() {
       stdio: VERBOSE ? [0, 1, 2] : ['ignore', 'pipe', 'pipe'],
     }
     // On a cold SPM checkout dust-llm-swift's llama.cpp submodule may not be
-    // fully initialized, causing 'llama.h not found' on the first build attempt.
-    // A single retry is enough — SPM finishes resolving on the second pass.
+    // fully initialized, causing the first build to fail. A single retry is
+    // enough — SPM finishes resolving on the second pass.
     try {
       execSync(buildCmd, buildOpts)
-    } catch (firstErr) {
-      const firstOut = (firstErr.stdout || firstErr.stderr || firstErr.message || '')
-      if (firstOut.includes('llama.h') || firstOut.includes('not found')) {
-        console.log('  → First build attempt failed (SPM submodule init), retrying…')
-        execSync(buildCmd, buildOpts)
-      } else {
-        throw firstErr
-      }
+    } catch (_firstErr) {
+      console.log('  → First build attempt failed (likely SPM submodule init), retrying…')
+      execSync(buildCmd, buildOpts)
     }
     pass('1.3 xcodebuild succeeded')
   } catch (err) {
