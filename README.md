@@ -17,6 +17,7 @@
   <img alt="npm" src="https://img.shields.io/badge/npm-dust--llm--capacitor-cb3837">
   <img alt="Capacitor" src="https://img.shields.io/badge/Capacitor-7%20%7C%208-119EFF">
   <img alt="GGUF" src="https://img.shields.io/badge/GGUF-llama.cpp-blueviolet">
+  <img alt="MLX" src="https://img.shields.io/badge/MLX-Apple_Silicon-green">
   <a href="https://github.com/rogelioRuiz/dust-llm-capacitor/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/rogelioRuiz/dust-llm-capacitor/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
 
@@ -47,9 +48,9 @@
 
 # dust-llm-capacitor
 
-Capacitor plugin for on-device LLM inference via [llama.cpp](https://github.com/ggerganov/llama.cpp) over GGUF model files.
+Capacitor plugin for on-device LLM inference. Supports **GGUF** models via [llama.cpp](https://github.com/ggerganov/llama.cpp) on both platforms, and **MLX** models optimized for Apple Silicon on iOS.
 
-This is the **Capacitor bridge layer** — it translates JavaScript API calls into native calls on [dust-llm-swift](https://github.com/rogelioRuiz/dust-llm-swift) (iOS) and [dust-llm-kotlin](https://github.com/rogelioRuiz/dust-llm-kotlin) (Android), which contain all model loading, inference, and session management logic.
+This is the **Capacitor bridge layer** — it translates JavaScript API calls into native calls on [dust-llm-swift](https://github.com/rogelioRuiz/dust-llm-swift) (iOS) and [dust-llm-kotlin](https://github.com/rogelioRuiz/dust-llm-kotlin) (Android), which contain all model loading, inference, and session management logic. The backend is selected automatically based on model format.
 
 ## Demo
 
@@ -126,9 +127,10 @@ This plugin is a **thin bridge** between JavaScript and the native dust-llm libr
                        │ delegates to
 ┌──────────────────────┴──────────────────────────────────┐
 │  dust-llm-swift / dust-llm-kotlin                       │
-│  - LlamaEngine (llama.cpp C/JNI bindings)               │
+│  - LlamaContext (llama.cpp C/JNI bindings)              │
+│  - MLXEngine (Apple Silicon, iOS only)                  │
 │  - LlamaSession (tokenize, generate, stream, chat)      │
-│  - LLMSessionManager (ref-counted session cache)        │
+│  - LLMSessionManager (dual-backend routing + cache)     │
 │  - ChatTemplateEngine (Jinja2 subset renderer)          │
 │  - VisionEncoder (CLIP/LLaVA multimodal)                │
 └─────────────────────────────────────────────────────────┘
@@ -148,13 +150,21 @@ All inference logic, session management, chat templates, and vision support live
 ```typescript
 import { LLM } from 'dust-llm-capacitor';
 
-// Load a model
+// Load a GGUF model
 const result = await LLM.loadModel({
   descriptor: { id: 'my-model', format: 'gguf', url: '/path/to/model.gguf' },
   config: { nGpuLayers: -1, contextSize: 2048, batchSize: 512 },
   priority: 0, // 0 = interactive, 1 = background
 });
 // result: { modelId: string, metadata: { name?, chatTemplate?, hasVision } }
+
+// Load an MLX model (iOS only — Apple Silicon with Metal GPU)
+const mlxResult = await LLM.loadModel({
+  descriptor: { id: 'my-model', format: 'mlx', url: '/path/to/Qwen3.5-2B-8bit/' },
+  config: { contextSize: 2048 },
+  priority: 0,
+});
+// Same API — backend selected automatically based on format
 
 // Load a vision model with explicit mmproj path
 const visionResult = await LLM.loadModel({
@@ -366,8 +376,8 @@ The `example/` directory contains **LLM Chat** — a full interactive chat app t
 
 ```bash
 # From repo root — single command
-npm run test:ios       # iOS (requires booted simulator)
-npm run test:android   # Android (requires connected device/emulator)
+npm run test:ios       # iOS GGUF (requires booted simulator)
+npm run test:android   # Android GGUF (requires connected device/emulator)
 ```
 
 Add `--verbose` for full build output (xcodebuild, gradlew, cap sync):
@@ -383,18 +393,23 @@ Or step by step:
 npm install && npm run build    # build the plugin
 cd example && npm install       # install example deps
 
-# iOS
+# iOS (GGUF)
 node test-e2e-ios.mjs
+
+# iOS (MLX — requires physical device with Metal GPU)
+node test-e2e-ios.mjs --mlx
 
 # Android
 node test-e2e-android.mjs
 ```
 
+> **Note:** The `--mlx` flag downloads [Qwen 3.5 2B 8-bit](https://huggingface.co/mlx-community/Qwen3.5-2B-8bit) (~2.6 GB) from the mlx-community HuggingFace repo. MLX requires Metal GPU acceleration, which is only available on physical Apple Silicon devices — it will not work on the iOS Simulator.
+
 ### What the test scripts auto-handle
 
-- Download [Qwen 3.5 2B](https://huggingface.co/unsloth/Qwen3.5-2B-GGUF) Q4_K_M (~1.3 GB, cached in `test/models/`)
+- Download [Qwen 3.5 2B](https://huggingface.co/unsloth/Qwen3.5-2B-GGUF) Q4_K_M (~1.3 GB) or [Qwen 3.5 2B 8-bit MLX](https://huggingface.co/mlx-community/Qwen3.5-2B-8bit) (~2.6 GB), cached in `test/models/`
 - `cap add ios` / `cap add android` if platform directory is missing
-- iOS: patch deployment target to 16.0, SPM resolution
+- iOS: patch deployment target to 16.0 (GGUF) or 17.0 (MLX), SPM resolution
 - Android: patch Kotlin Gradle plugin, minSdk 26, cleartext HTTP for localhost
 - `cap sync`, native build (`xcodebuild` / `gradlew assembleDebug`)
 - App install, model deployment to simulator/device, HTTP result collection
@@ -492,13 +507,15 @@ adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 adb shell am start -n io.t6x.llmchat/.MainActivity
 ```
 
-### Using a different GGUF model
+### Using a different model
 
-You can run any GGUF model — the example app is not tied to Qwen. Here's how to swap it.
+You can run any GGUF or MLX model — the example app is not tied to Qwen. Here's how to swap it.
 
 #### 1. Pick a model
 
-Browse [HuggingFace GGUF models](https://huggingface.co/models?library=gguf&sort=trending). For phones, stick to **1B–3B parameters** with **Q4_K_M** quantization — this gives the best balance of quality and speed on mobile RAM. Larger quants like Q5_K_M or Q8_0 are better quality but need more memory.
+**GGUF**: Browse [HuggingFace GGUF models](https://huggingface.co/models?library=gguf&sort=trending). For phones, stick to **1B–3B parameters** with **Q4_K_M** quantization — this gives the best balance of quality and speed on mobile RAM. Larger quants like Q5_K_M or Q8_0 are better quality but need more memory.
+
+**MLX** (iOS only): Browse [mlx-community on HuggingFace](https://huggingface.co/mlx-community). Look for models with 4-bit or 8-bit quantization. MLX models are directories containing `config.json` + `.safetensors` weight files.
 
 | Parameters | Q4_K_M size | Recommended for |
 |-----------|------------|-----------------|
@@ -511,14 +528,15 @@ Browse [HuggingFace GGUF models](https://huggingface.co/models?library=gguf&sort
 Open `example/www/index.html` and change two things:
 
 ```javascript
-// Line 745 — point to your model file
+// Point to your model file (GGUF) or directory (MLX)
 var MODEL_PATH = '/data/local/tmp/your-model-name.gguf'
+var MODEL_FORMAT = 'gguf'  // 'gguf' or 'mlx'
 
-// Line 1094-1100 — optionally update the descriptor ID
+// Optionally update the descriptor ID
 function defaultDescriptor() {
   return {
     id: 'your-model',       // any string — used as the session key
-    format: 'gguf',
+    format: MODEL_FORMAT,
     url: MODEL_PATH
   }
 }
@@ -563,6 +581,8 @@ Follow the same steps as above — `adb push` for Android, `cp` into the simulat
 
 **`contextSize` multiplies memory usage.** A 4096-token context uses ~4× the RAM of a 1024-token context for the KV cache. If the app is killed shortly after loading, try lowering `contextSize` before switching to a smaller model.
 
+**MLX models require a physical Apple Silicon device.** MLX uses Metal GPU acceleration, which is not available in the iOS Simulator. On simulator, MLX models fail immediately with a clear error. Use GGUF models for simulator testing, or test MLX on a physical iPhone/iPad.
+
 **Android GPU requires Vulkan 1.2+.** Most 2019+ Android devices (Qualcomm Adreno, ARM Mali, Samsung Xclipse, Google Tensor) support this. Older devices and emulators without Vulkan 1.2 automatically fall back to CPU — no error, no crash. Set `nGpuLayers: 0` to force CPU-only.
 
 **`cap sync` may regenerate patched files.** If you manually patched the iOS deployment target or Android minSdk, running `cap sync` can overwrite your changes. Re-apply patches after syncing. The E2E test scripts handle this automatically, but manual runs require awareness.
@@ -581,9 +601,10 @@ Follow the same steps as above — `adb push` for Android, `cp` into the simulat
 
 | Aspect | iOS | Android |
 |--------|-----|---------|
+| Backends | GGUF (llama.cpp) + MLX (Apple Silicon) | GGUF (llama.cpp) |
 | GPU | Metal (`nGpuLayers: -1` = auto) | Vulkan (`nGpuLayers: -1` = auto, CPU fallback) |
 | Build system | SPM (Package.swift) or CocoaPods (podspec) | Gradle + Maven Central |
-| Native library | dust-llm-swift (compiles llama.cpp via SPM) | dust-llm-kotlin (compiles llama.cpp via CMake + NDK) |
+| Native library | dust-llm-swift (llama.cpp via SPM + mlx-swift-lm) | dust-llm-kotlin (llama.cpp via CMake + NDK) |
 | Thread model | `DispatchQueue` | `HandlerThread` + coroutines |
 | Memory pressure | `UIApplication.didReceiveMemoryWarningNotification` | `ComponentCallbacks2.onTrimMemory` |
 
