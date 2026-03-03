@@ -12,7 +12,7 @@
  *   - GGUF model auto-downloaded on first run
  *
  * Usage:
- *   node test-e2e-android.mjs
+ *   node test-e2e-android.mjs [--verbose]
  */
 
 import { execSync, spawn } from 'child_process'
@@ -23,6 +23,7 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT_DIR = path.resolve(__dirname, '..')
+const VERBOSE = process.argv.includes('--verbose')
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const BUNDLE_ID         = 'io.t6x.llmchat'
@@ -57,14 +58,15 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 // ─── Shell / ADB helpers ─────────────────────────────────────────────────────
 function run(cmd, opts = {}) {
   const nodePath = execSync('which node', { encoding: 'utf8' }).trim()
-  return execSync(cmd, {
+  const result = execSync(cmd, {
     encoding: 'utf8',
     timeout: 600_000,
     maxBuffer: 50 * 1024 * 1024,
     stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, PATH: `${path.dirname(nodePath)}:${process.env.PATH}` },
     ...opts,
-  }).trim()
+  })
+  return (result || '').trim()
 }
 
 function adb(args, opts = {}) {
@@ -145,7 +147,7 @@ function ensureAndroidProject() {
   const androidDir = path.join(__dirname, 'android')
   if (fs.existsSync(androidDir)) return
   console.log('  → cap add android...')
-  npx('cap add android', { cwd: __dirname, stdio: ['ignore', 'pipe', 'pipe'], timeout: 60_000 })
+  npx('cap add android', { cwd: __dirname, stdio: VERBOSE ? [0, 1, 2] : ['ignore', 'pipe', 'pipe'], timeout: 60_000 })
 }
 
 function patchAndroidBuildGradle() {
@@ -323,12 +325,12 @@ async function main() {
     npx('cap sync android', {
       cwd: __dirname,
       timeout: 300_000,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: VERBOSE ? [0, 1, 2] : ['ignore', 'pipe', 'pipe'],
     })
     pass('1.2 Android project synced')
 
     console.log('  → Building APK (./gradlew assembleDebug)...')
-    run('./gradlew assembleDebug', { cwd: path.join(__dirname, 'android') })
+    run('./gradlew assembleDebug', { cwd: path.join(__dirname, 'android'), ...(VERBOSE && { stdio: [0, 1, 2] }) })
     if (!fs.existsSync(apkPath)) throw new Error('APK not found after build')
     const apkSize = Math.round(fs.statSync(apkPath).size / 1024 / 1024)
     pass('1.3 APK built', `${apkSize} MB`)

@@ -370,6 +370,13 @@ npm run test:ios       # iOS (requires booted simulator)
 npm run test:android   # Android (requires connected device/emulator)
 ```
 
+Add `--verbose` for full build output (xcodebuild, gradlew, cap sync):
+
+```bash
+npm run test:ios:verbose
+npm run test:android:verbose
+```
+
 Or step by step:
 
 ```bash

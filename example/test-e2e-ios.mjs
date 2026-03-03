@@ -13,7 +13,7 @@
  *   - GGUF model auto-downloaded on first run
  *
  * Usage:
- *   node test-e2e-ios.mjs
+ *   node test-e2e-ios.mjs [--verbose]
  */
 
 import { execSync } from 'child_process'
@@ -24,6 +24,7 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT_DIR = path.resolve(__dirname, '..')
+const VERBOSE = process.argv.includes('--verbose')
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const BUNDLE_ID    = 'io.t6x.llmchat'
@@ -106,11 +107,12 @@ function getXcodeMajorVersion() {
 // ─── Shell helper ────────────────────────────────────────────────────────────
 function run(cmd, opts = {}) {
   const nodePath = execSync('which node', { encoding: 'utf8' }).trim()
-  return execSync(cmd, {
+  const result = execSync(cmd, {
     encoding: 'utf8',
     env: { ...process.env, PATH: `${path.dirname(nodePath)}:${process.env.PATH}` },
     ...opts,
-  }).trim()
+  })
+  return (result || '').trim()
 }
 
 function npx(args, opts = {}) {
@@ -195,7 +197,7 @@ function ensureIosPlatform() {
   const iosDir = path.join(__dirname, 'ios')
   if (fs.existsSync(iosDir)) return
   console.log('  → cap add ios...')
-  npx('cap add ios', { cwd: __dirname, stdio: ['ignore', 'pipe', 'pipe'], timeout: 60_000 })
+  npx('cap add ios', { cwd: __dirname, stdio: VERBOSE ? [0, 1, 2] : ['ignore', 'pipe', 'pipe'], timeout: 60_000 })
 }
 
 function fixDeploymentTarget() {
@@ -268,7 +270,7 @@ async function main() {
     npx('cap sync ios', {
       cwd: __dirname,
       timeout: 60000,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: VERBOSE ? [0, 1, 2] : ['ignore', 'pipe', 'pipe'],
     })
     // Re-fix deployment target after cap sync (it may regenerate CapApp-SPM)
     fixDeploymentTarget()
@@ -297,7 +299,7 @@ async function main() {
         cwd: path.join(__dirname, 'ios/App'),
         encoding: 'utf8',
         timeout: 600_000,
-        stdio: ['ignore', 'pipe', 'pipe'],
+        stdio: VERBOSE ? [0, 1, 2] : ['ignore', 'pipe', 'pipe'],
       }
     )
     pass('1.3 xcodebuild succeeded')
