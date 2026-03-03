@@ -1160,6 +1160,7 @@
               return templated.prompt
             }
           } catch (_error) {
+            console.warn('applyTemplate failed, using fallback:', _error)
           }
         }
 
@@ -1212,7 +1213,7 @@
             modelId: state.modelId,
             prompt: compiledPrompt,
             maxTokens: options.maxTokens || state.defaultMaxTokens || 96,
-            stopSequences: options.stopSequences || [],
+            stopSequences: options.stopSequences || ['<|im_end|>'],
             sampler: options.sampler || { temperature: 0.7, topP: 0.9 }
           })
         } catch (error) {
