@@ -2,7 +2,9 @@ import Capacitor
 import Foundation
 import DustCore
 @_exported import DustLlm
+#if canImport(ServePlugin)
 import ServePlugin
+#endif
 import UIKit
 
 @objc(LLMPlugin)
@@ -30,9 +32,11 @@ public class LLMPlugin: CAPPlugin, CAPBridgedPlugin {
 
     public override func load() {
         super.load()
+        #if canImport(ServePlugin)
         if let servePlugin = bridge?.plugin(withName: "Serve") as? ServePlugin {
             servePlugin.setSessionFactory(sessionManager)
         }
+        #endif
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleMemoryWarning),

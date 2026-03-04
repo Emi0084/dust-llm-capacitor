@@ -137,21 +137,17 @@ function getXcodeMajorVersion() {
 
 // ─── Shell helper ────────────────────────────────────────────────────────────
 function run(cmd, opts = {}) {
-  const nodePath = execSync("which node", { encoding: "utf8" }).trim();
+  const nodeBin = path.dirname(process.execPath);
   const result = execSync(cmd, {
     encoding: "utf8",
-    env: {
-      ...process.env,
-      PATH: `${path.dirname(nodePath)}:${process.env.PATH}`,
-    },
+    env: { ...process.env, PATH: `${nodeBin}:${process.env.PATH}` },
     ...opts,
   });
   return (result || "").trim();
 }
 
 function npx(args, opts = {}) {
-  const npmPath = execSync("which npm", { encoding: "utf8" }).trim();
-  const npxPath = path.join(path.dirname(npmPath), "npx");
+  const npxPath = path.join(path.dirname(process.execPath), "npx");
   return run(`${npxPath} ${args}`, opts);
 }
 
