@@ -60,14 +60,30 @@ function fail(name, error) {
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
 // ─── Shell / ADB helpers ─────────────────────────────────────────────────────
+// Build a PATH that works in non-interactive SSH shells (no ~/.zprofile sourced).
+function extendedPath() {
+  const nodeDir = path.dirname(process.execPath)
+  const androidHome = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT
+    || path.join(process.env.HOME, 'Library/Android/sdk')
+  const extra = [
+    nodeDir,
+    '/opt/homebrew/bin',       // Apple Silicon Homebrew
+    '/usr/local/bin',          // Intel Homebrew / system installs
+    `${process.env.HOME}/.nvm/versions/node/current/bin`, // nvm current
+    path.join(androidHome, 'platform-tools'),
+    path.join(androidHome, 'emulator'),
+  ].filter(Boolean)
+  const existing = (process.env.PATH || '').split(':')
+  return [...new Set([...extra, ...existing])].join(':')
+}
+
 function run(cmd, opts = {}) {
-  const nodePath = execSync('which node', { encoding: 'utf8' }).trim()
   const result = execSync(cmd, {
     encoding: 'utf8',
     timeout: 600_000,
     maxBuffer: 50 * 1024 * 1024,
     stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, PATH: `${path.dirname(nodePath)}:${process.env.PATH}` },
+    env: { ...process.env, PATH: extendedPath() },
     ...opts,
   })
   return (result || '').trim()
