@@ -36,7 +36,7 @@ class LLMPlugin : Plugin(), ComponentCallbacks2 {
         handler = Handler(workerThread.looper)
         dispatcher = handler.asCoroutineDispatcher()
         scope = CoroutineScope(dispatcher + SupervisorJob())
-        (bridge.pluginManager.getPlugin("Serve")?.plugin as? ServePlugin)
+        (bridge.getPlugin("Serve")?.getInstance() as? ServePlugin)
             ?.setSessionFactory(sessionManager)
         bridge.context.registerComponentCallbacks(this)
     }
