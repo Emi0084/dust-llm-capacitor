@@ -7,7 +7,10 @@
     "sync": "cap sync",
     "build:apk": "cd android && ./gradlew assembleDebug",
     "test:ios": "node test-e2e-ios.mjs",
-    "test:android": "node test-e2e-android.mjs"
+    "test:android": "node test-e2e-android.mjs",
+    "test:ios:serve": "node test-e2e-serve-ios.mjs",
+    "test:resume-ios": "node test-e2e-resume-ios.mjs",
+    "test:resume-android": "node test-e2e-resume-android.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.1.0",
@@ -16,7 +19,7 @@
     "@capacitor/filesystem": "^8.0.0",
     "dust-llm-capacitor": "file:..",
     "dust-core-capacitor": "0.1.3",
-    "dust-serve-capacitor": "0.1.9"
+    "dust-serve-capacitor": "0.1.10"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.1.0"

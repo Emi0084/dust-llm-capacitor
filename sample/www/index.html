@@ -1005,10 +1005,58 @@
       }
 
       function setCardError(format, message) {
-        setCardBtnState(format, false, 'Retry')
+        var isVerificationError = message && message.indexOf('SHA-256') >= 0
+        setCardBtnState(format, false, isVerificationError ? 'Retry' : 'Resume')
         var c = cardEls(format)
         c.btn.disabled = false
         setCardStatus(format, 'error', message)
+      }
+
+      /* ─── GGUF resume listeners (for reconnected downloads) ────────────── */
+
+      var ggufResumeHandles = []
+
+      function attachGGUFResumeListeners() {
+        cleanupGGUFResumeListeners()
+        state.Serve.addListener('sizeDisclosure', function (event) {
+          if (event.modelId !== GGUF_MODEL_ID) return
+          state.totalBytes = event.sizeBytes || 0
+        }).then(function (h) { ggufResumeHandles.push(h) })
+
+        state.Serve.addListener('modelProgress', function (event) {
+          if (event.modelId !== GGUF_MODEL_ID) return
+          state.downloadedBytes = event.bytesDownloaded || 0
+          if (event.totalBytes) state.totalBytes = event.totalBytes
+          state.downloadProgress = state.totalBytes > 0
+            ? Math.round((state.downloadedBytes / state.totalBytes) * 100)
+            : Math.round((event.progress || 0) * 100)
+          updateCardProgress('gguf')
+          setCardStatus('gguf', 'loading', 'Downloading...')
+        }).then(function (h) { ggufResumeHandles.push(h) })
+
+        state.Serve.addListener('modelReady', function (event) {
+          if (event.modelId !== GGUF_MODEL_ID) return
+          state.downloading = false
+          state.downloadProgress = 100
+          updateCardProgress('gguf')
+          setCardStatus('gguf', 'ready', 'Download complete')
+          setCardBtnState('gguf', false, 'Load Model')
+          cleanupGGUFResumeListeners()
+        }).then(function (h) { ggufResumeHandles.push(h) })
+
+        state.Serve.addListener('modelFailed', function (event) {
+          if (event.modelId !== GGUF_MODEL_ID) return
+          state.downloading = false
+          var msg = (event.error && (event.error.detail || event.error.message)) || 'Download failed'
+          setCardError('gguf', msg)
+          cleanupGGUFResumeListeners()
+        }).then(function (h) { ggufResumeHandles.push(h) })
+      }
+
+      function cleanupGGUFResumeListeners() {
+        while (ggufResumeHandles.length > 0) {
+          try { ggufResumeHandles.pop().remove() } catch (_e) {}
+        }
       }
 
       /* ─── Chat UI (reused from example) ─────────────────────────────────── */
@@ -2171,9 +2219,29 @@
         if (state.Serve) {
           try { await state.Serve.registerModel({ descriptor: GGUF_DESCRIPTOR }) } catch (_e) {}
         }
-        var ggufReady = await checkGGUFModelReady()
+
+        // Check if a download is already in progress (e.g., resumed after app kill)
+        var ggufStatus = null
+        if (state.Serve) {
+          try {
+            var sr = await state.Serve.getModelStatus({ modelId: GGUF_MODEL_ID })
+            ggufStatus = sr && sr.status ? sr.status : null
+          } catch (_e) {}
+        }
+
         els.ggufBtn.disabled = false
-        els.ggufBtnLabel.textContent = ggufReady ? 'Load Model' : 'Download Model'
+        if (ggufStatus && ggufStatus.kind === 'downloading') {
+          state.downloading = true
+          state.downloadProgress = Math.round((ggufStatus.progress || 0) * 100)
+          setCardBtnState('gguf', true, 'Resuming...')
+          setCardStatus('gguf', 'loading', 'Resuming download...')
+          updateCardProgress('gguf')
+          attachGGUFResumeListeners()
+        } else if (ggufStatus && ggufStatus.kind === 'ready') {
+          els.ggufBtnLabel.textContent = 'Load Model'
+        } else {
+          els.ggufBtnLabel.textContent = 'Download Model'
+        }
 
         // Show MLX card on Apple platforms
         if (isApplePlatform()) {
