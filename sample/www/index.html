@@ -415,31 +415,39 @@
 
     .message-bubble {
       width: auto;
-      max-width: min(80%, 720px);
-      padding: 12px 16px;
-      border-radius: 0.5rem;
-      border: none;
-      background: var(--secondary);
+      max-width: min(78%, 720px);
+      padding: 14px 16px;
+      border-radius: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.04);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
     }
 
     .message-row.user .message-bubble {
-      background: var(--secondary);
-      color: var(--foreground);
+      background:
+        linear-gradient(135deg, rgba(124, 58, 237, 0.3), rgba(124, 58, 237, 0.16)),
+        rgba(255, 255, 255, 0.04);
+      border-color: rgba(124, 58, 237, 0.24);
+      border-bottom-right-radius: 8px;
     }
 
     .message-row.assistant .message-bubble {
       width: 100%;
       max-width: 100%;
-      background: transparent;
-      padding: 4px 2px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.03)),
+        rgba(255, 255, 255, 0.02);
+      border-bottom-left-radius: 8px;
     }
 
     .message-row.error .message-bubble {
       width: 100%;
       max-width: 100%;
-      background: rgba(220, 38, 38, 0.08);
-      border: 1px solid rgba(220, 38, 38, 0.18);
-      border-radius: 0.5rem;
+      border-color: rgba(220, 38, 38, 0.28);
+      background:
+        linear-gradient(180deg, rgba(220, 38, 38, 0.12), rgba(220, 38, 38, 0.08)),
+        rgba(255, 255, 255, 0.02);
+      border-bottom-left-radius: 8px;
     }
 
     .message-role {
@@ -1177,9 +1185,13 @@
 
       async function downloadAndLoad() {
         try {
-          await downloadModel()
+          var exists = await checkModelExists()
+          if (!exists) {
+            await downloadModel()
+          }
           var absolutePath = await resolveModelAbsolutePath()
           MODEL_PATH = absolutePath
+          setDownloadBtnState(true, 'Loading model...')
           setDownloadStatus('loading', 'Loading model...')
           await loadModelFromPath(absolutePath)
           await transitionToChat()
@@ -1685,16 +1697,14 @@
           return
         }
 
-        // Check if model is already on device
+        // Always show download screen — user decides when to proceed
         var exists = await checkModelExists()
-        if (exists) {
-          await loadExistingModel()
-          return
-        }
-
-        // Show download screen, enable button
         els.downloadBtn.disabled = false
-        els.downloadBtnLabel.textContent = 'Download Model'
+        if (exists) {
+          els.downloadBtnLabel.textContent = 'Load Model'
+        } else {
+          els.downloadBtnLabel.textContent = 'Download Model'
+        }
         bindDownloadEvents()
       }
 
