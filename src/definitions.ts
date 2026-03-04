@@ -100,6 +100,7 @@ export interface LLMPlugin {
     modelId: string
     messages: ChatMessage[]
     addGenerationPrompt?: boolean
+    enableThinking?: boolean
   }): Promise<ApplyTemplateResult>
   generateChat(options: {
     modelId: string
@@ -107,6 +108,7 @@ export interface LLMPlugin {
     maxTokens?: number
     stopSequences?: string[]
     sampler?: SamplerParams
+    enableThinking?: boolean
   }): Promise<GenerateChatResult>
   clearHistory(options: { modelId: string }): Promise<void>
   getContextUsed(options: { modelId: string }): Promise<{ contextUsed: number }>

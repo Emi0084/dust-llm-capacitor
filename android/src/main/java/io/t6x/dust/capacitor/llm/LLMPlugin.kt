@@ -303,9 +303,11 @@ class LLMPlugin : Plugin(), ComponentCallbacks2 {
         }
 
         try {
+            val enableThinking = call.getBoolean("enableThinking")
             val (prompt, tokenCount) = session.applyTemplate(
                 messages = messages,
                 addGenerationPrompt = call.getBoolean("addGenerationPrompt") ?: false,
+                enableThinking = enableThinking,
             )
             call.resolve(
                 JSObject()
@@ -354,7 +356,8 @@ class LLMPlugin : Plugin(), ComponentCallbacks2 {
 
         scope.launch {
             try {
-                val (result, contextUsed) = session.generateChat(messages, maxTokens, stopSequences, sampler)
+                val enableThinking = call.getBoolean("enableThinking")
+                val (result, contextUsed) = session.generateChat(messages, maxTokens, stopSequences, sampler, enableThinking)
                 call.resolve(
                     JSObject()
                         .put("text", result.text)

@@ -287,11 +287,13 @@ public class LLMPlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         let addGenerationPrompt = call.getBool("addGenerationPrompt") ?? false
+        let enableThinking = call.getBool("enableThinking")
 
         do {
             let result = try session.applyTemplate(
                 messages: messages,
-                addGenerationPrompt: addGenerationPrompt
+                addGenerationPrompt: addGenerationPrompt,
+                enableThinking: enableThinking
             )
             call.resolve([
                 "prompt": result.prompt,
@@ -351,13 +353,16 @@ public class LLMPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
+        let enableThinking = call.getBool("enableThinking")
+
         LLMSessionManager.inferenceQueue.async { [weak self] in
             do {
                 let result = try session.generateChat(
                     messages: messages,
                     maxTokens: maxTokens,
                     stopSequences: stopSequences,
-                    sampler: sampler
+                    sampler: sampler,
+                    enableThinking: enableThinking
                 )
                 call.resolve([
                     "text": result.result.text,

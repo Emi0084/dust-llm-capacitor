@@ -688,9 +688,15 @@
           <div id="title">LLM Chat</div>
           <div id="model-label">No model loaded</div>
         </div>
-        <div id="status-pill">
-          <span id="status-dot" class="status-dot loading"></span>
-          <span id="status-label">Waiting</span>
+        <div style="display:flex;align-items:center;gap:12px">
+          <label id="thinking-toggle" style="display:flex;align-items:center;gap:6px;font-size:0.75rem;color:var(--muted-foreground);cursor:pointer;user-select:none">
+            <span>Thinking</span>
+            <input type="checkbox" id="thinking-checkbox" style="accent-color:var(--primary);width:14px;height:14px;cursor:pointer" />
+          </label>
+          <div id="status-pill">
+            <span id="status-dot" class="status-dot loading"></span>
+            <span id="status-label">Waiting</span>
+          </div>
         </div>
       </div>
     </header>
@@ -759,7 +765,8 @@
         activeAssistant: null,
         pendingGeneration: null,
         lastCompletion: null,
-        defaultMaxTokens: 96
+        defaultMaxTokens: 96,
+        enableThinking: false
       }
 
       var els = {}
@@ -783,6 +790,10 @@
         return deferred
       }
 
+      function stripThinkingBlocks(text) {
+        return text.replace(/<think>[\s\S]*?<\/think>\s*/g, '').replace(/<think>[\s\S]*/g, '')
+      }
+
       function cacheEls() {
         els.chatUi = byId('chat-ui')
         els.testUi = byId('test-ui')
@@ -801,6 +812,13 @@
         els.tests = byId('tests')
         els.summary = byId('summary')
         els.plugins = byId('plugins')
+        els.thinkingCheckbox = byId('thinking-checkbox')
+        if (els.thinkingCheckbox) {
+          els.thinkingCheckbox.checked = state.enableThinking
+          els.thinkingCheckbox.addEventListener('change', function () {
+            state.enableThinking = els.thinkingCheckbox.checked
+          })
+        }
       }
 
       function setStatus(kind, label) {
@@ -991,7 +1009,9 @@
           if (event.modelId !== state.modelId || !state.activeAssistant) {
             return
           }
-          setMessageText(state.activeAssistant, state.activeAssistant.content + event.token)
+          var raw = (state.activeAssistant.rawContent || '') + event.token
+          state.activeAssistant.rawContent = raw
+          setMessageText(state.activeAssistant, stripThinkingBlocks(raw))
           setMessageStreaming(state.activeAssistant, true)
           scrollMessages()
         })
@@ -1004,16 +1024,18 @@
             return
           }
 
-          var text = typeof event.text === 'string'
+          var rawText = typeof event.text === 'string'
             ? event.text
             : state.activeAssistant
-              ? state.activeAssistant.content
+              ? (state.activeAssistant.rawContent || state.activeAssistant.content)
               : ''
+          var text = stripThinkingBlocks(rawText)
 
           if (state.activeAssistant) {
             setMessageText(state.activeAssistant, text)
             setMessageStreaming(state.activeAssistant, false)
             applyCompletionMeta(state.activeAssistant, event)
+            state.activeAssistant.rawContent = undefined
           }
 
           if (text) {
@@ -1156,7 +1178,8 @@
             var templated = await state.LLM.applyTemplate({
               modelId: state.modelId,
               messages: state.chatHistory,
-              addGenerationPrompt: true
+              addGenerationPrompt: true,
+              enableThinking: state.enableThinking
             })
             if (templated && templated.prompt) {
               return templated.prompt

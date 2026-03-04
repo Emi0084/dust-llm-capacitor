@@ -61,6 +61,7 @@ class LLMWeb extends WebPlugin implements LLMPlugin {
     modelId: string
     messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>
     addGenerationPrompt?: boolean
+    enableThinking?: boolean
   }): Promise<ApplyTemplateResult> {
     throw this.unimplemented('applyTemplate is not supported on web')
   }
@@ -71,6 +72,7 @@ class LLMWeb extends WebPlugin implements LLMPlugin {
     maxTokens?: number
     stopSequences?: string[]
     sampler?: unknown
+    enableThinking?: boolean
   }): Promise<GenerateChatResult> {
     throw this.unimplemented('generateChat is not supported on web')
   }

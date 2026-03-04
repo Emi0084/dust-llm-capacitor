@@ -26,6 +26,6 @@ dependencies {
     implementation project(':capacitor-android')
     implementation project(':dust-core-capacitor')
     compileOnly project(':dust-serve-capacitor')
-    api 'io.t6x.dust:dust-llm-kotlin:0.2.2'
+    api 'io.t6x.dust:dust-llm-kotlin:0.2.3'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0'
 }
