@@ -125,41 +125,12 @@
       transition: opacity 0.35s ease, transform 0.35s ease;
     }
 
-    .download-card {
-      width: min(420px, 100%);
-      padding: 32px 28px;
-      border-radius: 28px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)),
-        rgba(16, 16, 16, 0.9);
-      box-shadow: var(--shadow-soft);
-      backdrop-filter: blur(20px);
+    .download-header {
       text-align: center;
+      margin-bottom: 24px;
     }
 
-    .download-icon {
-      width: 72px;
-      height: 72px;
-      margin: 0 auto 20px;
-      border-radius: 22px;
-      background: linear-gradient(135deg, rgba(124, 58, 237, 0.28), rgba(124, 58, 237, 0.1));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .download-icon svg {
-      width: 32px;
-      height: 32px;
-      stroke: var(--primary);
-      fill: none;
-      stroke-width: 2;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-
-    .download-card .eyebrow {
+    .download-header .eyebrow {
       font-size: 0.72rem;
       font-weight: 700;
       letter-spacing: 0.14em;
@@ -167,42 +138,115 @@
       color: var(--primary);
     }
 
-    .download-card h1 {
-      margin: 10px 0 10px;
+    .download-header h1 {
+      margin: 10px 0 8px;
       font-size: 1.5rem;
       line-height: 1.1;
       letter-spacing: -0.02em;
     }
 
-    .download-card p {
-      margin: 0 0 18px;
+    .download-header p {
+      margin: 0;
       line-height: 1.5;
       color: var(--muted-foreground);
       font-size: 0.92rem;
     }
 
+    .model-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: min(420px, 100%);
+    }
+
+    .model-card {
+      padding: 24px 22px;
+      border-radius: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)),
+        rgba(16, 16, 16, 0.9);
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(20px);
+      text-align: left;
+    }
+
+    .model-card-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+
+    .model-card-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .model-card-icon.gguf {
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.28), rgba(124, 58, 237, 0.1));
+    }
+
+    .model-card-icon.mlx {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.28), rgba(59, 130, 246, 0.1));
+    }
+
+    .model-card-icon svg {
+      width: 24px;
+      height: 24px;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .model-card-icon.gguf svg { stroke: var(--primary); }
+    .model-card-icon.mlx svg { stroke: rgba(59, 130, 246, 1); }
+
+    .model-card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .model-card-subtitle {
+      font-size: 0.8rem;
+      color: var(--muted-foreground);
+      margin-top: 2px;
+    }
+
     .model-info {
       display: flex;
-      justify-content: center;
       gap: 8px;
-      margin-bottom: 20px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
     }
 
     .model-badge {
       display: inline-flex;
       align-items: center;
-      min-height: 26px;
-      padding: 0 12px;
+      min-height: 24px;
+      padding: 0 10px;
       border-radius: 999px;
       border: 1px solid rgba(255, 255, 255, 0.08);
       background: rgba(255, 255, 255, 0.04);
       color: var(--muted-foreground);
-      font-size: 0.74rem;
+      font-size: 0.72rem;
       font-weight: 600;
     }
 
+    .model-badge.apple {
+      border-color: rgba(59, 130, 246, 0.2);
+      color: rgba(59, 130, 246, 0.9);
+    }
+
     .progress-container {
-      margin-bottom: 18px;
+      margin-bottom: 14px;
     }
 
     .progress-bar {
@@ -220,25 +264,28 @@
       transition: width 0.3s ease;
     }
 
+    .progress-fill.mlx {
+      background: linear-gradient(90deg, rgba(59, 130, 246, 1), rgba(96, 165, 250, 0.9));
+    }
+
     .progress-text {
       margin-top: 8px;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: var(--muted-foreground);
     }
 
     .download-status {
       display: flex;
       align-items: center;
-      justify-content: center;
       gap: 8px;
-      margin-bottom: 14px;
-      font-size: 0.82rem;
+      margin-bottom: 12px;
+      font-size: 0.8rem;
       color: var(--muted-foreground);
     }
 
     .download-btn {
       width: 100%;
-      height: 52px;
+      height: 46px;
       border: 0;
       border-radius: 999px;
       padding: 0 18px;
@@ -250,10 +297,16 @@
         linear-gradient(135deg, rgba(124, 58, 237, 1), rgba(139, 92, 246, 0.82));
       color: var(--primary-foreground);
       font-weight: 700;
-      font-size: 0.98rem;
+      font-size: 0.92rem;
       letter-spacing: 0.01em;
-      box-shadow: 0 18px 36px rgba(124, 58, 237, 0.22);
+      box-shadow: 0 14px 28px rgba(124, 58, 237, 0.22);
       transition: opacity 0.15s ease, transform 0.12s ease;
+    }
+
+    .download-btn.mlx {
+      background:
+        linear-gradient(135deg, rgba(59, 130, 246, 1), rgba(96, 165, 250, 0.82));
+      box-shadow: 0 14px 28px rgba(59, 130, 246, 0.22);
     }
 
     .download-btn:active {
@@ -661,43 +714,91 @@
 
       #primary-action { min-width: 72px; padding: 0 14px; }
 
-      .download-card { padding: 24px 20px; }
+      .model-card { padding: 20px 16px; }
     }
   </style>
 </head>
 <body>
   <!-- ─── Screen 1: Download Model ────────────────────────────────────────── -->
   <div id="download-screen" class="panel">
-    <div class="download-card">
-      <div class="download-icon">
-        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      </div>
+    <div class="download-header">
       <div class="eyebrow">dust-llm-capacitor</div>
-      <h1>Download Qwen 3.5</h1>
-      <p id="download-subtitle">Download a 2B-parameter model to run inference directly on this device.</p>
+      <h1>Qwen 3.5 &mdash; 2B</h1>
+      <p>Choose a format to download and run on this device.</p>
+    </div>
 
-      <div class="model-info">
-        <span class="model-badge">GGUF</span>
-        <span class="model-badge">Q4_K_M</span>
-        <span class="model-badge">~1.3 GB</span>
-      </div>
-
-      <div id="progress-container" class="progress-container hidden">
-        <div class="progress-bar">
-          <div id="progress-fill" class="progress-fill"></div>
+    <div class="model-cards">
+      <!-- GGUF card (always shown) -->
+      <div class="model-card" id="gguf-card">
+        <div class="model-card-header">
+          <div class="model-card-icon gguf">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </div>
+          <div>
+            <div class="model-card-title">GGUF &mdash; llama.cpp</div>
+            <div class="model-card-subtitle">Cross-platform &middot; CPU + partial GPU</div>
+          </div>
         </div>
-        <div id="progress-text" class="progress-text">0%</div>
+
+        <div class="model-info">
+          <span class="model-badge">GGUF</span>
+          <span class="model-badge">Q4_K_M</span>
+          <span class="model-badge">~1.3 GB</span>
+        </div>
+
+        <div id="gguf-progress" class="progress-container hidden">
+          <div class="progress-bar">
+            <div id="gguf-progress-fill" class="progress-fill"></div>
+          </div>
+          <div id="gguf-progress-text" class="progress-text">0%</div>
+        </div>
+
+        <div id="gguf-status" class="download-status hidden">
+          <span id="gguf-status-dot" class="status-dot"></span>
+          <span id="gguf-status-label"></span>
+        </div>
+
+        <button id="gguf-btn" class="download-btn" type="button" disabled>
+          <span id="gguf-spinner" class="spinner hidden"></span>
+          <span id="gguf-btn-label">Waiting for bridge...</span>
+        </button>
       </div>
 
-      <div id="download-status" class="download-status hidden">
-        <span id="download-status-dot" class="status-dot"></span>
-        <span id="download-status-label"></span>
-      </div>
+      <!-- MLX card (Apple only) -->
+      <div class="model-card hidden" id="mlx-card">
+        <div class="model-card-header">
+          <div class="model-card-icon mlx">
+            <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          </div>
+          <div>
+            <div class="model-card-title">MLX &mdash; Apple Silicon</div>
+            <div class="model-card-subtitle">Metal GPU acceleration &middot; iOS / macOS only</div>
+          </div>
+        </div>
 
-      <button id="download-btn" class="download-btn" type="button" disabled>
-        <span id="download-spinner" class="spinner hidden"></span>
-        <span id="download-btn-label">Waiting for bridge...</span>
-      </button>
+        <div class="model-info">
+          <span class="model-badge apple">MLX</span>
+          <span class="model-badge apple">8-bit</span>
+          <span class="model-badge">~2.6 GB</span>
+        </div>
+
+        <div id="mlx-progress" class="progress-container hidden">
+          <div class="progress-bar">
+            <div id="mlx-progress-fill" class="progress-fill mlx"></div>
+          </div>
+          <div id="mlx-progress-text" class="progress-text">0%</div>
+        </div>
+
+        <div id="mlx-status" class="download-status hidden">
+          <span id="mlx-status-dot" class="status-dot"></span>
+          <span id="mlx-status-label"></span>
+        </div>
+
+        <button id="mlx-btn" class="download-btn mlx" type="button" disabled>
+          <span id="mlx-spinner" class="spinner hidden"></span>
+          <span id="mlx-btn-label">Waiting for bridge...</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -752,6 +853,8 @@
     var SKIP_DOWNLOAD = false
     var GGUF_URL = 'https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/Qwen3.5-2B-Q4_K_M.gguf'
     var GGUF_NAME = 'Qwen3.5-2B-Q4_K_M.gguf'
+    var MLX_REPO = 'mlx-community/Qwen3.5-2B-8bit'
+    var MLX_DIR_NAME = 'Qwen3.5-2B-8bit'
 
     ;(function () {
       /* ─── State ─────────────────────────────────────────────────────────── */
@@ -802,17 +905,30 @@
       /* ─── Element cache ─────────────────────────────────────────────────── */
 
       function cacheEls() {
-        // download
+        // download screen
         els.downloadScreen = byId('download-screen')
-        els.downloadBtn = byId('download-btn')
-        els.downloadSpinner = byId('download-spinner')
-        els.downloadBtnLabel = byId('download-btn-label')
-        els.progressContainer = byId('progress-container')
-        els.progressFill = byId('progress-fill')
-        els.progressText = byId('progress-text')
-        els.downloadStatus = byId('download-status')
-        els.downloadStatusDot = byId('download-status-dot')
-        els.downloadStatusLabel = byId('download-status-label')
+        // gguf card elements
+        els.ggufCard = byId('gguf-card')
+        els.ggufBtn = byId('gguf-btn')
+        els.ggufSpinner = byId('gguf-spinner')
+        els.ggufBtnLabel = byId('gguf-btn-label')
+        els.ggufProgress = byId('gguf-progress')
+        els.ggufProgressFill = byId('gguf-progress-fill')
+        els.ggufProgressText = byId('gguf-progress-text')
+        els.ggufStatus = byId('gguf-status')
+        els.ggufStatusDot = byId('gguf-status-dot')
+        els.ggufStatusLabel = byId('gguf-status-label')
+        // mlx card elements
+        els.mlxCard = byId('mlx-card')
+        els.mlxBtn = byId('mlx-btn')
+        els.mlxSpinner = byId('mlx-spinner')
+        els.mlxBtnLabel = byId('mlx-btn-label')
+        els.mlxProgress = byId('mlx-progress')
+        els.mlxProgressFill = byId('mlx-progress-fill')
+        els.mlxProgressText = byId('mlx-progress-text')
+        els.mlxStatus = byId('mlx-status')
+        els.mlxStatusDot = byId('mlx-status-dot')
+        els.mlxStatusLabel = byId('mlx-status-label')
         // chat
         els.chatUi = byId('chat-ui')
         els.statusDot = byId('status-dot')
@@ -829,35 +945,57 @@
         els.plugins = null
       }
 
-      /* ─── Download UI ───────────────────────────────────────────────────── */
+      /* ─── Download UI (per-card helpers) ─────────────────────────────────── */
 
-      function setDownloadBtnState(loading, label) {
+      function cardEls(format) {
+        var f = format === 'mlx' ? 'mlx' : 'gguf'
+        return {
+          btn: els[f + 'Btn'],
+          spinner: els[f + 'Spinner'],
+          btnLabel: els[f + 'BtnLabel'],
+          progress: els[f + 'Progress'],
+          progressFill: els[f + 'ProgressFill'],
+          progressText: els[f + 'ProgressText'],
+          status: els[f + 'Status'],
+          statusDot: els[f + 'StatusDot'],
+          statusLabel: els[f + 'StatusLabel']
+        }
+      }
+
+      function setCardBtnState(format, loading, label) {
+        var c = cardEls(format)
         state.downloading = !!loading
-        els.downloadBtn.disabled = !!loading
-        els.downloadSpinner.classList.toggle('hidden', !loading)
-        els.downloadBtnLabel.textContent = label
+        c.btn.disabled = !!loading
+        c.spinner.classList.toggle('hidden', !loading)
+        c.btnLabel.textContent = label
+        // Disable the other card's button while downloading
+        var other = cardEls(format === 'mlx' ? 'gguf' : 'mlx')
+        if (other.btn) other.btn.disabled = !!loading
       }
 
-      function setDownloadStatus(kind, label) {
-        els.downloadStatus.classList.remove('hidden')
-        els.downloadStatusDot.className = 'status-dot ' + kind
-        els.downloadStatusLabel.textContent = label
+      function setCardStatus(format, kind, label) {
+        var c = cardEls(format)
+        c.status.classList.remove('hidden')
+        c.statusDot.className = 'status-dot ' + kind
+        c.statusLabel.textContent = label
       }
 
-      function updateProgressUI() {
-        els.progressContainer.classList.remove('hidden')
-        els.progressFill.style.width = state.downloadProgress + '%'
+      function updateCardProgress(format) {
+        var c = cardEls(format)
+        c.progress.classList.remove('hidden')
+        c.progressFill.style.width = state.downloadProgress + '%'
         var text = state.downloadProgress + '%'
         if (state.downloadedBytes > 0 && state.totalBytes > 0) {
           text += ' \u2014 ' + formatBytes(state.downloadedBytes) + ' / ' + formatBytes(state.totalBytes)
         }
-        els.progressText.textContent = text
+        c.progressText.textContent = text
       }
 
-      function setDownloadError(message) {
-        setDownloadBtnState(false, 'Retry Download')
-        els.downloadBtn.disabled = false
-        setDownloadStatus('error', message)
+      function setCardError(format, message) {
+        setCardBtnState(format, false, 'Retry')
+        var c = cardEls(format)
+        c.btn.disabled = false
+        setCardStatus(format, 'error', message)
       }
 
       /* ─── Chat UI (reused from example) ─────────────────────────────────── */
@@ -1068,48 +1206,62 @@
         throw new Error('LLM plugin not found after 10s')
       }
 
+      /* ─── Platform detection ─────────────────────────────────────────────── */
+
+      function isApplePlatform() {
+        var ua = navigator.userAgent || ''
+        return /iPhone|iPad|Mac/.test(ua)
+      }
+
       /* ─── Download ──────────────────────────────────────────────────────── */
 
-      async function checkModelExists() {
+      async function checkModelExists(format) {
         if (!state.Filesystem) return false
         try {
-          var stat = await state.Filesystem.stat({
-            path: GGUF_NAME,
-            directory: 'DOCUMENTS'
-          })
-          return stat && stat.size > 1000000000
+          if (format === 'mlx') {
+            // MLX model is a directory — check for config.json inside it
+            var stat = await state.Filesystem.stat({
+              path: MLX_DIR_NAME + '/config.json',
+              directory: 'DOCUMENTS'
+            })
+            return stat && stat.size > 0
+          } else {
+            var stat = await state.Filesystem.stat({
+              path: GGUF_NAME,
+              directory: 'DOCUMENTS'
+            })
+            return stat && stat.size > 1000000000
+          }
         } catch (_e) {
           return false
         }
       }
 
-      async function resolveModelAbsolutePath() {
+      async function resolveModelAbsolutePath(format) {
+        var name = format === 'mlx' ? MLX_DIR_NAME : GGUF_NAME
         var uriResult = await state.Filesystem.getUri({
-          path: GGUF_NAME,
+          path: name,
           directory: 'DOCUMENTS'
         })
         return uriResult.uri.replace('file://', '')
       }
 
-      async function downloadModel() {
-        setDownloadBtnState(true, 'Downloading...')
-        setDownloadStatus('loading', 'Connecting...')
-        els.progressContainer.classList.remove('hidden')
+      async function downloadGGUFModel() {
+        setCardBtnState('gguf', true, 'Downloading...')
+        setCardStatus('gguf', 'loading', 'Connecting...')
 
         var progressListener = null
         try {
-          // Listen for progress events via Filesystem plugin
           progressListener = await state.Filesystem.addListener('progress', function (event) {
             state.totalBytes = event.contentLength || 0
             state.downloadedBytes = event.bytes || 0
             if (state.totalBytes > 0) {
               state.downloadProgress = Math.round((state.downloadedBytes / state.totalBytes) * 100)
             }
-            updateProgressUI()
-            setDownloadStatus('loading', 'Downloading...')
+            updateCardProgress('gguf')
+            setCardStatus('gguf', 'loading', 'Downloading...')
           })
 
-          // Stream download to disk via native Filesystem.downloadFile()
           await state.Filesystem.downloadFile({
             url: GGUF_URL,
             path: GGUF_NAME,
@@ -1119,15 +1271,105 @@
           })
 
           state.downloadProgress = 100
-          updateProgressUI()
-          setDownloadStatus('ready', 'Download complete')
-          setDownloadBtnState(true, 'Loading model...')
-
+          updateCardProgress('gguf')
+          setCardStatus('gguf', 'ready', 'Download complete')
+          setCardBtnState('gguf', true, 'Loading model...')
         } catch (error) {
-          setDownloadError(error.message || 'Download failed')
+          setCardError('gguf', error.message || 'Download failed')
           throw error
         } finally {
           if (progressListener) progressListener.remove()
+        }
+      }
+
+      async function downloadMLXModel() {
+        setCardBtnState('mlx', true, 'Fetching file list...')
+        setCardStatus('mlx', 'loading', 'Connecting to HuggingFace...')
+
+        try {
+          // 1. List files in the HuggingFace repo via API
+          var apiUrl = 'https://huggingface.co/api/models/' + MLX_REPO
+          var resp = await fetch(apiUrl)
+          if (!resp.ok) throw new Error('Failed to fetch model info: ' + resp.status)
+          var repoInfo = await resp.json()
+
+          var siblings = repoInfo.siblings || []
+          // Filter to essential files only (skip .gitattributes, README, etc.)
+          var essentialExts = ['.json', '.safetensors', '.model', '.txt']
+          var files = siblings.filter(function (s) {
+            var name = s.rfilename || ''
+            // Skip hidden files and README
+            if (name.startsWith('.') || name === 'README.md') return false
+            return essentialExts.some(function (ext) { return name.endsWith(ext) })
+          })
+
+          if (files.length === 0) throw new Error('No model files found in repository')
+
+          // Calculate total size from siblings metadata
+          var totalSize = 0
+          for (var i = 0; i < files.length; i++) {
+            totalSize += files[i].size || 0
+          }
+
+          // 2. Create the model directory
+          try {
+            await state.Filesystem.mkdir({
+              path: MLX_DIR_NAME,
+              directory: 'DOCUMENTS',
+              recursive: true
+            })
+          } catch (_e) { /* directory may already exist */ }
+
+          // 3. Download each file sequentially with overall progress
+          var downloadedTotal = 0
+          state.totalBytes = totalSize
+          state.downloadedBytes = 0
+          state.downloadProgress = 0
+
+          for (var i = 0; i < files.length; i++) {
+            var fileName = files[i].rfilename
+            var fileSize = files[i].size || 0
+            var fileUrl = 'https://huggingface.co/' + MLX_REPO + '/resolve/main/' + fileName
+
+            setCardStatus('mlx', 'loading', 'Downloading ' + (i + 1) + '/' + files.length + ': ' + fileName)
+
+            // Track per-file progress
+            var fileProgressListener = await state.Filesystem.addListener('progress', function (event) {
+              var fileBytes = event.bytes || 0
+              state.downloadedBytes = downloadedTotal + fileBytes
+              if (state.totalBytes > 0) {
+                state.downloadProgress = Math.round((state.downloadedBytes / state.totalBytes) * 100)
+              }
+              updateCardProgress('mlx')
+            })
+
+            try {
+              await state.Filesystem.downloadFile({
+                url: fileUrl,
+                path: MLX_DIR_NAME + '/' + fileName,
+                directory: 'DOCUMENTS',
+                progress: true,
+                recursive: true
+              })
+            } finally {
+              if (fileProgressListener) fileProgressListener.remove()
+            }
+
+            downloadedTotal += fileSize
+            state.downloadedBytes = downloadedTotal
+            if (state.totalBytes > 0) {
+              state.downloadProgress = Math.round((state.downloadedBytes / state.totalBytes) * 100)
+            }
+            updateCardProgress('mlx')
+          }
+
+          state.downloadProgress = 100
+          updateCardProgress('mlx')
+          setCardStatus('mlx', 'ready', 'Download complete (' + files.length + ' files)')
+          setCardBtnState('mlx', true, 'Loading model...')
+        } catch (error) {
+          setCardError('mlx', error.message || 'Download failed')
+          throw error
         }
       }
 
@@ -1183,27 +1425,33 @@
 
       /* ─── Download + Load combined flow ─────────────────────────────────── */
 
-      async function downloadAndLoad() {
+      async function downloadAndLoad(format) {
+        format = format || 'gguf'
+        MODEL_FORMAT = format
         try {
-          var exists = await checkModelExists()
+          var exists = await checkModelExists(format)
           if (!exists) {
-            await downloadModel()
+            if (format === 'mlx') {
+              await downloadMLXModel()
+            } else {
+              await downloadGGUFModel()
+            }
           }
-          var absolutePath = await resolveModelAbsolutePath()
+          var absolutePath = await resolveModelAbsolutePath(format)
           MODEL_PATH = absolutePath
-          setDownloadBtnState(true, 'Loading model...')
-          setDownloadStatus('loading', 'Loading model...')
+          setCardBtnState(format, true, 'Loading model...')
+          setCardStatus(format, 'loading', 'Loading model...')
           await loadModelFromPath(absolutePath)
           await transitionToChat()
         } catch (error) {
-          setDownloadError(error.message || 'Failed')
+          setCardError(format, error.message || 'Failed')
           throw error
         }
       }
 
       async function loadExistingModel() {
         try {
-          var absolutePath = MODEL_PATH || await resolveModelAbsolutePath()
+          var absolutePath = MODEL_PATH || await resolveModelAbsolutePath(MODEL_FORMAT)
           MODEL_PATH = absolutePath
 
           // Skip download screen — go straight to chat with loading state
@@ -1337,8 +1585,11 @@
       }
 
       function bindDownloadEvents() {
-        els.downloadBtn.addEventListener('click', function () {
-          downloadAndLoad().catch(function (e) { console.error('downloadAndLoad failed:', e) })
+        els.ggufBtn.addEventListener('click', function () {
+          downloadAndLoad('gguf').catch(function (e) { console.error('downloadAndLoad gguf failed:', e) })
+        })
+        els.mlxBtn.addEventListener('click', function () {
+          downloadAndLoad('mlx').catch(function (e) { console.error('downloadAndLoad mlx failed:', e) })
         })
       }
 
@@ -1429,11 +1680,15 @@
               // Model pre-pushed by e2e script
               assert(MODEL_PATH, 'MODEL_PATH must be set when SKIP_DOWNLOAD is true')
             } else {
-              var exists = await checkModelExists()
+              var exists = await checkModelExists(MODEL_FORMAT)
               if (!exists) {
-                await downloadModel()
+                if (MODEL_FORMAT === 'mlx') {
+                  await downloadMLXModel()
+                } else {
+                  await downloadGGUFModel()
+                }
               }
-              MODEL_PATH = await resolveModelAbsolutePath()
+              MODEL_PATH = await resolveModelAbsolutePath(MODEL_FORMAT)
             }
             assert(MODEL_PATH, 'MODEL_PATH must be resolved')
           }, 600000)
@@ -1681,7 +1936,7 @@
             await postResult('FATAL', 'fail', null, error.message)
             await postDone(0, 1, 1, error.message)
           } else {
-            setDownloadError('Bridge unavailable: ' + error.message)
+            setCardError('gguf', 'Bridge unavailable: ' + error.message)
           }
           return
         }
@@ -1698,13 +1953,18 @@
         }
 
         // Always show download screen — user decides when to proceed
-        var exists = await checkModelExists()
-        els.downloadBtn.disabled = false
-        if (exists) {
-          els.downloadBtnLabel.textContent = 'Load Model'
-        } else {
-          els.downloadBtnLabel.textContent = 'Download Model'
+        var ggufExists = await checkModelExists('gguf')
+        els.ggufBtn.disabled = false
+        els.ggufBtnLabel.textContent = ggufExists ? 'Load Model' : 'Download Model'
+
+        // Show MLX card on Apple platforms
+        if (isApplePlatform()) {
+          els.mlxCard.classList.remove('hidden')
+          var mlxExists = await checkModelExists('mlx')
+          els.mlxBtn.disabled = false
+          els.mlxBtnLabel.textContent = mlxExists ? 'Load Model' : 'Download Model'
         }
+
         bindDownloadEvents()
       }
 
