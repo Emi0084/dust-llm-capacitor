@@ -139,13 +139,27 @@ function getXcodeMajorVersion() {
 }
 
 // ─── Shell helper ────────────────────────────────────────────────────────────
+
+// Build a PATH that works in non-interactive SSH shells (no ~/.zprofile sourced).
+function extendedPath() {
+  const nodeDir = path.dirname(process.execPath);
+  const extra = [
+    nodeDir,
+    "/opt/homebrew/bin",       // Apple Silicon Homebrew
+    "/usr/local/bin",          // Intel Homebrew / system installs
+    `${process.env.HOME}/.nvm/versions/node/current/bin`, // nvm current (symlink)
+  ].filter(Boolean);
+  const existing = (process.env.PATH || "").split(":");
+  const merged = [...new Set([...extra, ...existing])];
+  return merged.join(":");
+}
+
 function run(cmd, opts = {}) {
-  const nodePath = execSync("which node", { encoding: "utf8" }).trim();
   const result = execSync(cmd, {
     encoding: "utf8",
     env: {
       ...process.env,
-      PATH: `${path.dirname(nodePath)}:${process.env.PATH}`,
+      PATH: extendedPath(),
     },
     ...opts,
   });
@@ -153,9 +167,7 @@ function run(cmd, opts = {}) {
 }
 
 function npx(args, opts = {}) {
-  const npmPath = execSync("which npm", { encoding: "utf8" }).trim();
-  const npxPath = path.join(path.dirname(npmPath), "npx");
-  return run(`${npxPath} ${args}`, opts);
+  return run(`npx ${args}`, opts);
 }
 
 // ─── auto-signing helper ──────────────────────────────────────────────────────
