@@ -856,12 +856,24 @@
     var MLX_REPO = 'mlx-community/Qwen3.5-2B-8bit'
     var MLX_DIR_NAME = 'Qwen3.5-2B-8bit'
 
+    /* ─── dust-serve GGUF descriptor ─────────────────────────────────────── */
+    var GGUF_MODEL_ID = 'qwen3.5-2b-q4km'
+    var GGUF_DESCRIPTOR = {
+      id: GGUF_MODEL_ID,
+      name: 'Qwen3.5 2B Q4_K_M',
+      format: 'gguf',
+      url: GGUF_URL,
+      sizeBytes: 1280835840,
+      sha256: 'aaf42c8b7c3cab2bf3d69c355048d4a0ee9973d48f16c731c0520ee914699223',
+      version: '1'
+    }
+
     ;(function () {
       /* ─── State ─────────────────────────────────────────────────────────── */
       var state = {
         LLM: null,
+        Serve: null,
         Filesystem: null,
-        // FileTransfer removed — using Filesystem.downloadFile() instead
         bridgeReady: false,
         listenersAttached: false,
         // download
@@ -1215,71 +1227,104 @@
 
       /* ─── Download ──────────────────────────────────────────────────────── */
 
-      async function checkModelExists(format) {
-        if (!state.Filesystem) return false
+      // Returns true if the GGUF model is already downloaded and verified by dust-serve
+      async function checkGGUFModelReady() {
+        if (!state.Serve) return false
         try {
-          if (format === 'mlx') {
-            // MLX model is a directory — check for config.json inside it
-            var stat = await state.Filesystem.stat({
-              path: MLX_DIR_NAME + '/config.json',
-              directory: 'DOCUMENTS'
-            })
-            return stat && stat.size > 0
-          } else {
-            var stat = await state.Filesystem.stat({
-              path: GGUF_NAME,
-              directory: 'DOCUMENTS'
-            })
-            return stat && stat.size > 1000000000
-          }
+          var result = await state.Serve.getModelStatus({ modelId: GGUF_MODEL_ID })
+          return result && result.status && result.status.kind === 'ready'
         } catch (_e) {
           return false
         }
       }
 
-      async function resolveModelAbsolutePath(format) {
-        var name = format === 'mlx' ? MLX_DIR_NAME : GGUF_NAME
+      // Legacy: MLX model check still uses Filesystem (MLX is multi-file, not a dust-serve model)
+      async function checkMLXModelExists() {
+        if (!state.Filesystem) return false
+        try {
+          var stat = await state.Filesystem.stat({
+            path: MLX_DIR_NAME + '/config.json',
+            directory: 'DOCUMENTS'
+          })
+          return stat && stat.size > 0
+        } catch (_e) {
+          return false
+        }
+      }
+
+      // Returns path for an MLX model from the local Filesystem
+      async function resolveMLXAbsolutePath() {
         var uriResult = await state.Filesystem.getUri({
-          path: name,
+          path: MLX_DIR_NAME,
           directory: 'DOCUMENTS'
         })
         return uriResult.uri.replace('file://', '')
       }
 
-      async function downloadGGUFModel() {
-        setCardBtnState('gguf', true, 'Downloading...')
-        setCardStatus('gguf', 'loading', 'Connecting...')
+      // Download GGUF via dust-serve (resumable, SHA-256 verified, background)
+      // Returns a promise that resolves with the absolute path when the model is ready
+      function downloadGGUFModel() {
+        return new Promise(async function (resolve, reject) {
+          setCardBtnState('gguf', true, 'Downloading...')
+          setCardStatus('gguf', 'loading', 'Connecting...')
 
-        var progressListener = null
-        try {
-          progressListener = await state.Filesystem.addListener('progress', function (event) {
-            state.totalBytes = event.contentLength || 0
-            state.downloadedBytes = event.bytes || 0
-            if (state.totalBytes > 0) {
-              state.downloadProgress = Math.round((state.downloadedBytes / state.totalBytes) * 100)
-            }
-            updateCardProgress('gguf')
-            setCardStatus('gguf', 'loading', 'Downloading...')
-          })
+          var progressHandle = null
+          var readyHandle = null
+          var failedHandle = null
 
-          await state.Filesystem.downloadFile({
-            url: GGUF_URL,
-            path: GGUF_NAME,
-            directory: 'DOCUMENTS',
-            progress: true,
-            recursive: true
-          })
+          function cleanup() {
+            if (progressHandle) { progressHandle.remove(); progressHandle = null }
+            if (readyHandle) { readyHandle.remove(); readyHandle = null }
+            if (failedHandle) { failedHandle.remove(); failedHandle = null }
+          }
 
-          state.downloadProgress = 100
-          updateCardProgress('gguf')
-          setCardStatus('gguf', 'ready', 'Download complete')
-          setCardBtnState('gguf', true, 'Loading model...')
-        } catch (error) {
-          setCardError('gguf', error.message || 'Download failed')
-          throw error
-        } finally {
-          if (progressListener) progressListener.remove()
-        }
+          try {
+            // Register the model descriptor (idempotent — safe to call every time)
+            await state.Serve.registerModel({ descriptor: GGUF_DESCRIPTOR })
+
+            // Listen for size disclosure (totalBytes available before download starts)
+            await state.Serve.addListener('sizeDisclosure', function (event) {
+              if (event.modelId !== GGUF_MODEL_ID) return
+              state.totalBytes = event.sizeBytes || 0
+            })
+
+            progressHandle = await state.Serve.addListener('modelProgress', function (event) {
+              if (event.modelId !== GGUF_MODEL_ID) return
+              state.downloadedBytes = event.bytesDownloaded || 0
+              if (event.totalBytes) state.totalBytes = event.totalBytes
+              state.downloadProgress = state.totalBytes > 0
+                ? Math.round((state.downloadedBytes / state.totalBytes) * 100)
+                : event.progress || 0
+              updateCardProgress('gguf')
+              setCardStatus('gguf', 'loading', 'Downloading...')
+            })
+
+            readyHandle = await state.Serve.addListener('modelReady', function (event) {
+              if (event.modelId !== GGUF_MODEL_ID) return
+              cleanup()
+              state.downloadProgress = 100
+              updateCardProgress('gguf')
+              setCardStatus('gguf', 'ready', 'Download complete')
+              setCardBtnState('gguf', true, 'Loading model...')
+              resolve(event.path)
+            })
+
+            failedHandle = await state.Serve.addListener('modelFailed', function (event) {
+              if (event.modelId !== GGUF_MODEL_ID) return
+              cleanup()
+              var msg = (event.error && event.error.message) || 'Download failed'
+              setCardError('gguf', msg)
+              reject(new Error(msg))
+            })
+
+            // Start the download (returns immediately; progress events drive the UI)
+            await state.Serve.downloadModel({ modelId: GGUF_MODEL_ID })
+          } catch (error) {
+            cleanup()
+            setCardError('gguf', error.message || 'Download failed')
+            reject(error)
+          }
+        })
       }
 
       async function downloadMLXModel() {
@@ -1429,15 +1474,21 @@
         format = format || 'gguf'
         MODEL_FORMAT = format
         try {
-          var exists = await checkModelExists(format)
-          if (!exists) {
-            if (format === 'mlx') {
-              await downloadMLXModel()
+          var absolutePath
+          if (format === 'mlx') {
+            var mlxExists = await checkMLXModelExists()
+            if (!mlxExists) await downloadMLXModel()
+            absolutePath = await resolveMLXAbsolutePath()
+          } else {
+            // dust-serve: register + download (or load from cache if already ready)
+            var ggufReady = await checkGGUFModelReady()
+            if (ggufReady) {
+              var statusResult = await state.Serve.getModelStatus({ modelId: GGUF_MODEL_ID })
+              absolutePath = statusResult.status.path
             } else {
-              await downloadGGUFModel()
+              absolutePath = await downloadGGUFModel()
             }
           }
-          var absolutePath = await resolveModelAbsolutePath(format)
           MODEL_PATH = absolutePath
           setCardBtnState(format, true, 'Loading model...')
           setCardStatus(format, 'loading', 'Loading model...')
@@ -1451,7 +1502,18 @@
 
       async function loadExistingModel() {
         try {
-          var absolutePath = MODEL_PATH || await resolveModelAbsolutePath(MODEL_FORMAT)
+          var absolutePath = MODEL_PATH
+          if (!absolutePath && MODEL_FORMAT !== 'mlx') {
+            // Try dust-serve status first
+            var ggufReady = await checkGGUFModelReady()
+            if (ggufReady) {
+              var statusResult = await state.Serve.getModelStatus({ modelId: GGUF_MODEL_ID })
+              absolutePath = statusResult.status.path
+            }
+          }
+          if (!absolutePath && MODEL_FORMAT === 'mlx') {
+            absolutePath = await resolveMLXAbsolutePath()
+          }
           MODEL_PATH = absolutePath
 
           // Skip download screen — go straight to chat with loading state
@@ -1680,15 +1742,19 @@
               // Model pre-pushed by e2e script
               assert(MODEL_PATH, 'MODEL_PATH must be set when SKIP_DOWNLOAD is true')
             } else {
-              var exists = await checkModelExists(MODEL_FORMAT)
-              if (!exists) {
-                if (MODEL_FORMAT === 'mlx') {
-                  await downloadMLXModel()
+              if (MODEL_FORMAT === 'mlx') {
+                var mlxExists = await checkMLXModelExists()
+                if (!mlxExists) await downloadMLXModel()
+                MODEL_PATH = await resolveMLXAbsolutePath()
+              } else {
+                var ggufReady = await checkGGUFModelReady()
+                if (!ggufReady) {
+                  MODEL_PATH = await downloadGGUFModel()
                 } else {
-                  await downloadGGUFModel()
+                  var sr = await state.Serve.getModelStatus({ modelId: GGUF_MODEL_ID })
+                  MODEL_PATH = sr.status.path
                 }
               }
-              MODEL_PATH = await resolveModelAbsolutePath(MODEL_FORMAT)
             }
             assert(MODEL_PATH, 'MODEL_PATH must be resolved')
           }, 600000)
@@ -1926,6 +1992,7 @@
 
         try {
           state.LLM = await waitForBridge()
+          state.Serve = window.Capacitor.Plugins.Serve || null
           state.Filesystem = window.Capacitor.Plugins.Filesystem || null
           state.bridgeReady = true
           await ensureListeners()
@@ -1953,14 +2020,18 @@
         }
 
         // Always show download screen — user decides when to proceed
-        var ggufExists = await checkModelExists('gguf')
+        // Register the GGUF descriptor upfront so dust-serve can track it
+        if (state.Serve) {
+          try { await state.Serve.registerModel({ descriptor: GGUF_DESCRIPTOR }) } catch (_e) {}
+        }
+        var ggufReady = await checkGGUFModelReady()
         els.ggufBtn.disabled = false
-        els.ggufBtnLabel.textContent = ggufExists ? 'Load Model' : 'Download Model'
+        els.ggufBtnLabel.textContent = ggufReady ? 'Load Model' : 'Download Model'
 
         // Show MLX card on Apple platforms
         if (isApplePlatform()) {
           els.mlxCard.classList.remove('hidden')
-          var mlxExists = await checkModelExists('mlx')
+          var mlxExists = await checkMLXModelExists()
           els.mlxBtn.disabled = false
           els.mlxBtnLabel.textContent = mlxExists ? 'Load Model' : 'Download Model'
         }
