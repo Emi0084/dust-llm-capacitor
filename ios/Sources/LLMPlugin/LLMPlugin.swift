@@ -79,7 +79,8 @@ public class LLMPlugin: CAPPlugin, CAPBridgedPlugin {
                     path: path,
                     modelId: modelId,
                     config: config,
-                    priority: priority
+                    priority: priority,
+                    format: DustModelFormat(rawValue: format)
                 )
                 call.resolve([
                     "modelId": session.sessionId,
@@ -524,7 +525,7 @@ public class LLMPlugin: CAPPlugin, CAPBridgedPlugin {
         case .fileNotFound(let path):
             call.reject("Model file not found at \(path)", "inferenceFailed", error)
         case .loadFailed(let path):
-            call.reject("Failed to load GGUF model at \(path)", "inferenceFailed", error)
+            call.reject("Failed to load model at \(path)", "inferenceFailed", error)
         case .contextCreationFailed(let path):
             call.reject("Failed to create llama context for \(path)", "inferenceFailed", error)
         case .contextOverflow(let promptTokens, let contextSize):
@@ -545,7 +546,7 @@ public class LLMPlugin: CAPPlugin, CAPBridgedPlugin {
         case .fileNotFound(let path):
             return "Model file not found at \(path)"
         case .loadFailed(let path):
-            return "Failed to load GGUF model at \(path)"
+            return "Failed to load model at \(path)"
         case .contextCreationFailed(let path):
             return "Failed to create llama context for \(path)"
         case .contextOverflow(let promptTokens, let contextSize):
