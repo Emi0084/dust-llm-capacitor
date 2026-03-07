@@ -16,10 +16,9 @@
     "@capacitor/android": "^8.1.0",
     "@capacitor/core": "^8.1.0",
     "@capacitor/ios": "^8.1.0",
-    "@capacitor/filesystem": "^8.0.0",
     "dust-llm-capacitor": "file:..",
     "dust-core-capacitor": "0.1.5",
-    "dust-serve-capacitor": "0.1.16"
+    "dust-serve-capacitor": "0.1.17"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.1.0"

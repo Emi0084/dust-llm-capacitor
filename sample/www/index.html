@@ -872,7 +872,7 @@
     var GGUF_URL = 'https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/Qwen3.5-2B-Q4_K_M.gguf'
     var GGUF_NAME = 'Qwen3.5-2B-Q4_K_M.gguf'
     var MLX_REPO = 'mlx-community/Qwen3.5-2B-8bit'
-    var MLX_DIR_NAME = 'Qwen3.5-2B-8bit'
+    var MLX_MODEL_ID = 'qwen3.5-2b-mlx-8bit'
 
     /* ─── dust-serve GGUF descriptor ─────────────────────────────────────── */
     var GGUF_MODEL_ID = 'qwen3.5-2b-q4km'
@@ -891,7 +891,6 @@
       var state = {
         LLM: null,
         Serve: null,
-        Filesystem: null,
         bridgeReady: false,
         listenersAttached: false,
         // download
@@ -1044,8 +1043,8 @@
         try {
           if (format === 'gguf' && state.Serve) {
             await state.Serve.deleteModel({ modelId: GGUF_MODEL_ID })
-          } else if (format === 'mlx' && state.Filesystem) {
-            try { await state.Filesystem.rmdir({ path: MLX_DIR_NAME, directory: 'DOCUMENTS', recursive: true }) } catch (_e) {}
+          } else if (format === 'mlx' && state.Serve) {
+            await state.Serve.deleteModel({ modelId: MLX_MODEL_ID })
           }
         } catch (_e) {}
         // Reset card UI
@@ -1332,27 +1331,21 @@
         }
       }
 
-      // Legacy: MLX model check still uses Filesystem (MLX is multi-file, not a dust-serve model)
-      async function checkMLXModelExists() {
-        if (!state.Filesystem) return false
+      // Check if the MLX model is already downloaded and verified by dust-serve
+      async function checkMLXModelReady() {
+        if (!state.Serve) return false
         try {
-          var stat = await state.Filesystem.stat({
-            path: MLX_DIR_NAME + '/config.json',
-            directory: 'DOCUMENTS'
-          })
-          return stat && stat.size > 0
+          var result = await state.Serve.getModelStatus({ modelId: MLX_MODEL_ID })
+          return result && result.status && result.status.kind === 'ready'
         } catch (_e) {
           return false
         }
       }
 
-      // Returns path for an MLX model from the local Filesystem
+      // Returns path for an MLX model from dust-serve status
       async function resolveMLXAbsolutePath() {
-        var uriResult = await state.Filesystem.getUri({
-          path: MLX_DIR_NAME,
-          directory: 'DOCUMENTS'
-        })
-        return uriResult.uri.replace('file://', '')
+        var result = await state.Serve.getModelStatus({ modelId: MLX_MODEL_ID })
+        return result.status.path
       }
 
       // Download GGUF via dust-serve (resumable, SHA-256 verified, background)
@@ -1421,95 +1414,111 @@
         })
       }
 
-      async function downloadMLXModel() {
-        setCardBtnState('mlx', true, 'Fetching file list...')
-        setCardStatus('mlx', 'loading', 'Connecting to HuggingFace...')
+      // Fetches HuggingFace tree API and builds a dust-serve descriptor with manifest
+      async function fetchMLXDescriptor() {
+        var treeUrl = 'https://huggingface.co/api/models/' + MLX_REPO + '/tree/main'
+        var resp = await fetch(treeUrl)
+        if (!resp.ok) throw new Error('Failed to fetch model file list: ' + resp.status)
+        var tree = await resp.json()
 
-        try {
-          // 1. List files in the HuggingFace repo via API
-          var apiUrl = 'https://huggingface.co/api/models/' + MLX_REPO
-          var resp = await fetch(apiUrl)
-          if (!resp.ok) throw new Error('Failed to fetch model info: ' + resp.status)
-          var repoInfo = await resp.json()
+        var essentialExts = ['.json', '.safetensors', '.model', '.txt']
+        var files = tree.filter(function (f) {
+          var name = f.path || ''
+          if (name.startsWith('.') || name === 'README.md') return false
+          return essentialExts.some(function (ext) { return name.endsWith(ext) })
+        })
 
-          var siblings = repoInfo.siblings || []
-          // Filter to essential files only (skip .gitattributes, README, etc.)
-          var essentialExts = ['.json', '.safetensors', '.model', '.txt']
-          var files = siblings.filter(function (s) {
-            var name = s.rfilename || ''
-            // Skip hidden files and README
-            if (name.startsWith('.') || name === 'README.md') return false
-            return essentialExts.some(function (ext) { return name.endsWith(ext) })
+        if (files.length === 0) throw new Error('No model files found in repository')
+
+        var totalSize = 0
+        var manifest = []
+        for (var i = 0; i < files.length; i++) {
+          var f = files[i]
+          var size = f.size || 0
+          totalSize += size
+          // HF tree API: LFS files have 64-char SHA-256 hash, git oids are 40-char SHA-1
+          var hash = (f.lfs && f.lfs.sha256) || null
+          if (!hash && f.oid && f.oid.length === 64) hash = f.oid
+          manifest.push({
+            filename: f.path,
+            url: 'https://huggingface.co/' + MLX_REPO + '/resolve/main/' + f.path,
+            sha256: hash || null,
+            sizeBytes: size
           })
-
-          if (files.length === 0) throw new Error('No model files found in repository')
-
-          // Calculate total size from siblings metadata
-          var totalSize = 0
-          for (var i = 0; i < files.length; i++) {
-            totalSize += files[i].size || 0
-          }
-
-          // 2. Create the model directory
-          try {
-            await state.Filesystem.mkdir({
-              path: MLX_DIR_NAME,
-              directory: 'DOCUMENTS',
-              recursive: true
-            })
-          } catch (_e) { /* directory may already exist */ }
-
-          // 3. Download each file sequentially with overall progress
-          var downloadedTotal = 0
-          state.totalBytes = totalSize
-          state.downloadedBytes = 0
-          state.downloadProgress = 0
-
-          for (var i = 0; i < files.length; i++) {
-            var fileName = files[i].rfilename
-            var fileSize = files[i].size || 0
-            var fileUrl = 'https://huggingface.co/' + MLX_REPO + '/resolve/main/' + fileName
-
-            setCardStatus('mlx', 'loading', 'Downloading ' + (i + 1) + '/' + files.length + ': ' + fileName)
-
-            // Track per-file progress
-            var fileProgressListener = await state.Filesystem.addListener('progress', function (event) {
-              var fileBytes = event.bytes || 0
-              state.downloadedBytes = downloadedTotal + fileBytes
-              if (state.totalBytes > 0) {
-                state.downloadProgress = Math.round((state.downloadedBytes / state.totalBytes) * 100)
-              }
-              updateCardProgress('mlx')
-            })
-
-            try {
-              await state.Filesystem.downloadFile({
-                url: fileUrl,
-                path: MLX_DIR_NAME + '/' + fileName,
-                directory: 'DOCUMENTS',
-                progress: true,
-                recursive: true
-              })
-            } finally {
-              if (fileProgressListener) fileProgressListener.remove()
-            }
-
-            downloadedTotal += fileSize
-            state.downloadedBytes = downloadedTotal
-            if (state.totalBytes > 0) {
-              state.downloadProgress = Math.round((state.downloadedBytes / state.totalBytes) * 100)
-            }
-            updateCardProgress('mlx')
-          }
-
-          state.downloadProgress = 100
-          updateCardProgress('mlx')
-          setCardStatus('mlx', 'ready', 'Download complete (' + files.length + ' files)')
-          setCardBtnState('mlx', true, 'Loading model...')
-        } catch (error) {
-          setCardError('mlx', error.message || 'Download failed')
-          throw error
         }
+
+        return {
+          id: MLX_MODEL_ID,
+          name: 'Qwen3.5 2B MLX 8-bit',
+          format: 'mlx',
+          sizeBytes: totalSize,
+          version: '1',
+          metadata: { files: JSON.stringify(manifest) }
+        }
+      }
+
+      // Download MLX via dust-serve (resumable, SHA-256 verified for LFS files, background)
+      // Returns a promise that resolves with the absolute path when the model is ready
+      function downloadMLXModel() {
+        return new Promise(async function (resolve, reject) {
+          setCardBtnState('mlx', true, 'Fetching file list...')
+          setCardStatus('mlx', 'loading', 'Connecting to HuggingFace...')
+
+          var progressHandle = null
+          var readyHandle = null
+          var failedHandle = null
+
+          function cleanup() {
+            if (progressHandle) { progressHandle.remove(); progressHandle = null }
+            if (readyHandle) { readyHandle.remove(); readyHandle = null }
+            if (failedHandle) { failedHandle.remove(); failedHandle = null }
+          }
+
+          try {
+            var descriptor = await fetchMLXDescriptor()
+            await state.Serve.registerModel({ descriptor: descriptor })
+
+            await state.Serve.addListener('sizeDisclosure', function (event) {
+              if (event.modelId !== MLX_MODEL_ID) return
+              state.totalBytes = event.sizeBytes || 0
+            })
+
+            progressHandle = await state.Serve.addListener('modelProgress', function (event) {
+              if (event.modelId !== MLX_MODEL_ID) return
+              state.downloadedBytes = event.bytesDownloaded || 0
+              if (event.totalBytes) state.totalBytes = event.totalBytes
+              state.downloadProgress = state.totalBytes > 0
+                ? Math.round((state.downloadedBytes / state.totalBytes) * 100)
+                : event.progress || 0
+              updateCardProgress('mlx')
+              setCardStatus('mlx', 'loading', 'Downloading...')
+            })
+
+            readyHandle = await state.Serve.addListener('modelReady', function (event) {
+              if (event.modelId !== MLX_MODEL_ID) return
+              cleanup()
+              state.downloadProgress = 100
+              updateCardProgress('mlx')
+              setCardStatus('mlx', 'ready', 'Download complete')
+              setCardBtnState('mlx', true, 'Loading model...')
+              resolve(event.path)
+            })
+
+            failedHandle = await state.Serve.addListener('modelFailed', function (event) {
+              if (event.modelId !== MLX_MODEL_ID) return
+              cleanup()
+              var msg = (event.error && event.error.message) || 'Download failed'
+              setCardError('mlx', msg)
+              reject(new Error(msg))
+            })
+
+            await state.Serve.downloadModel({ modelId: MLX_MODEL_ID })
+          } catch (error) {
+            cleanup()
+            setCardError('mlx', error.message || 'Download failed')
+            reject(error)
+          }
+        })
       }
 
       /* ─── Model loading ─────────────────────────────────────────────────── */
@@ -1570,9 +1579,12 @@
         try {
           var absolutePath
           if (format === 'mlx') {
-            var mlxExists = await checkMLXModelExists()
-            if (!mlxExists) await downloadMLXModel()
-            absolutePath = await resolveMLXAbsolutePath()
+            var mlxReady = await checkMLXModelReady()
+            if (mlxReady) {
+              absolutePath = await resolveMLXAbsolutePath()
+            } else {
+              absolutePath = await downloadMLXModel()
+            }
           } else {
             // dust-serve: register + download (or load from cache if already ready)
             var ggufReady = await checkGGUFModelReady()
@@ -1606,7 +1618,10 @@
             }
           }
           if (!absolutePath && MODEL_FORMAT === 'mlx') {
-            absolutePath = await resolveMLXAbsolutePath()
+            var mlxReady = await checkMLXModelReady()
+            if (mlxReady) {
+              absolutePath = await resolveMLXAbsolutePath()
+            }
           }
           MODEL_PATH = absolutePath
 
@@ -1843,9 +1858,12 @@
               assert(MODEL_PATH, 'MODEL_PATH must be set when SKIP_DOWNLOAD is true')
             } else {
               if (MODEL_FORMAT === 'mlx') {
-                var mlxExists = await checkMLXModelExists()
-                if (!mlxExists) await downloadMLXModel()
-                MODEL_PATH = await resolveMLXAbsolutePath()
+                var mlxReady = await checkMLXModelReady()
+                if (!mlxReady) {
+                  MODEL_PATH = await downloadMLXModel()
+                } else {
+                  MODEL_PATH = await resolveMLXAbsolutePath()
+                }
               } else {
                 var ggufReady = await checkGGUFModelReady()
                 if (!ggufReady) {
@@ -2233,7 +2251,6 @@
         try {
           state.LLM = await waitForBridge()
           state.Serve = window.Capacitor.Plugins.Serve || null
-          state.Filesystem = window.Capacitor.Plugins.Filesystem || null
           state.bridgeReady = true
           await ensureListeners()
         } catch (error) {
@@ -2300,10 +2317,10 @@
         // Show MLX card on Apple platforms
         if (isApplePlatform()) {
           els.mlxCard.classList.remove('hidden')
-          var mlxExists = await checkMLXModelExists()
+          var mlxReady = await checkMLXModelReady()
           els.mlxBtn.disabled = false
-          els.mlxBtnLabel.textContent = mlxExists ? 'Load Model' : 'Download Model'
-          if (mlxExists) showDeleteBtn('mlx', true)
+          els.mlxBtnLabel.textContent = mlxReady ? 'Load Model' : 'Download Model'
+          if (mlxReady) showDeleteBtn('mlx', true)
         }
 
         bindDownloadEvents()
