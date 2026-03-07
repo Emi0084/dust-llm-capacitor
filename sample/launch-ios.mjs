@@ -238,6 +238,22 @@ function fixDeploymentTarget() {
     );
     fs.writeFileSync(capSpm, content);
   }
+
+  // Add increased-memory-limit entitlement (required for MLX models on iPhone)
+  const entFile = path.join(__dirname, "ios/App/App/App.entitlements");
+  if (!fs.existsSync(entFile)) {
+    fs.writeFileSync(entFile, [
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
+      '<plist version="1.0">',
+      '<dict>',
+      '\t<key>com.apple.developer.kernel.increased-memory-limit</key>',
+      '\t<true/>',
+      '</dict>',
+      '</plist>',
+      '',
+    ].join('\n'));
+  }
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
