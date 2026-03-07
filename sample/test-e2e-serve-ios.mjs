@@ -29,8 +29,8 @@ const OPEN_SIMULATOR = process.argv.includes("--open-simulator");
 // ─── Config ───────────────────────────────────────────────────────────────────
 const BUNDLE_ID = "io.t6x.llmchat.sample";
 const RUNNER_PORT = 8099;
-const TOTAL_TESTS = 10;
-const TIMEOUT_MS = 1_200_000; // 20 min — download (1.3 GB) + all serve tests
+const TOTAL_TESTS = 13;
+const TIMEOUT_MS = 1_800_000; // 30 min — GGUF + MLX downloads + all serve tests
 
 const GGUF_MODEL_NAME = "Qwen3.5-2B-Q4_K_M.gguf";
 const IOS_MIN_VERSION = "17";

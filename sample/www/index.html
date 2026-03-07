@@ -2227,6 +2227,51 @@
             assert(result.status.path, 'status.path must be set after disk-restore re-register')
           })
 
+          // ── MLX download tests (Apple only) ──────────────────────────────
+          var mlxServePath = null
+
+          // S.11 fetchMLXDescriptor + registerModel
+          await t('S.11 MLX registerModel', async function () {
+            var descriptor = await fetchMLXDescriptor()
+            assert(descriptor && descriptor.id === MLX_MODEL_ID, 'descriptor id must match')
+            assert(descriptor.metadata && descriptor.metadata.files, 'descriptor must have manifest files')
+            await state.Serve.registerModel({ descriptor: descriptor })
+          }, 30000)
+
+          // S.12 MLX download model (multi-file manifest)
+          await t('S.12 MLX download model', async function () {
+            var resolveDownload, rejectDownload
+            var downloadPromise = new Promise(function (res, rej) { resolveDownload = res; rejectDownload = rej })
+
+            var readyHandle = await state.Serve.addListener('modelReady', function (event) {
+              if (event.modelId !== MLX_MODEL_ID) return
+              readyHandle.remove()
+              failedHandle.remove()
+              resolveDownload(event.path)
+            })
+
+            var failedHandle = await state.Serve.addListener('modelFailed', function (event) {
+              if (event.modelId !== MLX_MODEL_ID) return
+              readyHandle.remove()
+              failedHandle.remove()
+              rejectDownload(new Error((event.error && event.error.detail) || (event.error && event.error.message) || 'MLX download failed'))
+            })
+
+            state.Serve.downloadModel({ modelId: MLX_MODEL_ID }).catch(function (e) {
+              rejectDownload(new Error(e && e.message ? e.message : String(e)))
+            })
+
+            mlxServePath = await downloadPromise
+            assert(mlxServePath, 'modelReady event must include a path')
+          }, 900000)
+
+          // S.13 MLX getModelStatus ready
+          await t('S.13 MLX getModelStatus ready', async function () {
+            var result = await state.Serve.getModelStatus({ modelId: MLX_MODEL_ID })
+            assert(result.status.kind === 'ready', 'MLX status.kind must be ready, got: ' + result.status.kind)
+            assert(result.status.path, 'MLX status.path must be set when ready')
+          })
+
           await state.LLM.removeAllListeners()
           await postDone(passed, failed, total)
         } catch (error) {
