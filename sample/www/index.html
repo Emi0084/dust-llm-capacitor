@@ -319,6 +319,21 @@
       transform: none;
     }
 
+    .delete-btn {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.5rem;
+      border: 1px solid rgba(255,60,60,0.3);
+      border-radius: 0.75rem;
+      background: transparent;
+      color: #ff6b6b;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .delete-btn:active {
+      background: rgba(255,60,60,0.15);
+    }
+
     /* ─── Chat Screen ──────────────────────────────────────────────────────── */
 
     #chat-ui {
@@ -762,6 +777,7 @@
           <span id="gguf-spinner" class="spinner hidden"></span>
           <span id="gguf-btn-label">Waiting for bridge...</span>
         </button>
+        <button id="gguf-delete-btn" class="delete-btn hidden" type="button">Delete Model</button>
       </div>
 
       <!-- MLX card (Apple only) -->
@@ -798,6 +814,7 @@
           <span id="mlx-spinner" class="spinner hidden"></span>
           <span id="mlx-btn-label">Waiting for bridge...</span>
         </button>
+        <button id="mlx-delete-btn" class="delete-btn hidden" type="button">Delete Model</button>
       </div>
     </div>
   </div>
@@ -931,6 +948,7 @@
         els.ggufStatus = byId('gguf-status')
         els.ggufStatusDot = byId('gguf-status-dot')
         els.ggufStatusLabel = byId('gguf-status-label')
+        els.ggufDeleteBtn = byId('gguf-delete-btn')
         // mlx card elements
         els.mlxCard = byId('mlx-card')
         els.mlxBtn = byId('mlx-btn')
@@ -942,6 +960,7 @@
         els.mlxStatus = byId('mlx-status')
         els.mlxStatusDot = byId('mlx-status-dot')
         els.mlxStatusLabel = byId('mlx-status-label')
+        els.mlxDeleteBtn = byId('mlx-delete-btn')
         // chat
         els.chatUi = byId('chat-ui')
         els.statusDot = byId('status-dot')
@@ -971,7 +990,8 @@
           progressText: els[f + 'ProgressText'],
           status: els[f + 'Status'],
           statusDot: els[f + 'StatusDot'],
-          statusLabel: els[f + 'StatusLabel']
+          statusLabel: els[f + 'StatusLabel'],
+          deleteBtn: els[f + 'DeleteBtn']
         }
       }
 
@@ -1010,6 +1030,31 @@
         var c = cardEls(format)
         c.btn.disabled = false
         setCardStatus(format, 'error', message)
+        showDeleteBtn(format, true)
+      }
+
+      function showDeleteBtn(format, visible) {
+        var c = cardEls(format)
+        if (c.deleteBtn) c.deleteBtn.classList.toggle('hidden', !visible)
+      }
+
+      async function handleDeleteModel(format) {
+        var c = cardEls(format)
+        c.deleteBtn.disabled = true
+        try {
+          if (format === 'gguf' && state.Serve) {
+            await state.Serve.deleteModel({ modelId: GGUF_MODEL_ID })
+          } else if (format === 'mlx' && state.Filesystem) {
+            try { await state.Filesystem.rmdir({ path: MLX_DIR_NAME, directory: 'DOCUMENTS', recursive: true }) } catch (_e) {}
+          }
+        } catch (_e) {}
+        // Reset card UI
+        c.status.classList.add('hidden')
+        c.progress.classList.add('hidden')
+        setCardBtnState(format, false, 'Download Model')
+        c.btn.disabled = false
+        showDeleteBtn(format, false)
+        c.deleteBtn.disabled = false
       }
 
       /* ─── GGUF resume listeners (for reconnected downloads) ────────────── */
@@ -1702,6 +1747,12 @@
         els.mlxBtn.addEventListener('click', function () {
           downloadAndLoad('mlx').catch(function (e) { console.error('downloadAndLoad mlx failed:', e) })
         })
+        els.ggufDeleteBtn.addEventListener('click', function () {
+          handleDeleteModel('gguf').catch(function (e) { console.error('delete gguf failed:', e) })
+        })
+        els.mlxDeleteBtn.addEventListener('click', function () {
+          handleDeleteModel('mlx').catch(function (e) { console.error('delete mlx failed:', e) })
+        })
       }
 
       /* ─── Test harness ──────────────────────────────────────────────────── */
@@ -2239,6 +2290,9 @@
           attachGGUFResumeListeners()
         } else if (ggufStatus && ggufStatus.kind === 'ready') {
           els.ggufBtnLabel.textContent = 'Load Model'
+          showDeleteBtn('gguf', true)
+        } else if (ggufStatus && ggufStatus.kind === 'failed') {
+          setCardError('gguf', ggufStatus.error && ggufStatus.error.detail || 'Load failed')
         } else {
           els.ggufBtnLabel.textContent = 'Download Model'
         }
@@ -2249,6 +2303,7 @@
           var mlxExists = await checkMLXModelExists()
           els.mlxBtn.disabled = false
           els.mlxBtnLabel.textContent = mlxExists ? 'Load Model' : 'Download Model'
+          if (mlxExists) showDeleteBtn('mlx', true)
         }
 
         bindDownloadEvents()
