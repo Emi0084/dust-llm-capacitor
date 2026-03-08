@@ -634,6 +634,27 @@
       cursor: not-allowed;
     }
 
+    #thinking-toggle {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border: 0;
+      border-radius: 0.5rem;
+      background: transparent;
+      color: var(--muted-foreground);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: color 0.15s ease, background 0.15s ease;
+      cursor: pointer;
+    }
+
+    #thinking-toggle.active {
+      color: var(--primary);
+      background: rgba(99, 102, 241, 0.15);
+    }
+
     #primary-action {
       width: 36px;
       height: 36px;
@@ -851,6 +872,9 @@
           placeholder="Ask something..."
           disabled
         ></textarea>
+        <button id="thinking-toggle" type="button" title="Toggle thinking" class="active">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-7 7c0 3 2 5.5 4 7h6c2-1.5 4-4 4-7a7 7 0 0 0-7-7z"/><line x1="10" y1="20" x2="14" y2="20"/><line x1="10" y1="23" x2="14" y2="23"/></svg>
+        </button>
         <button id="primary-action" type="button" disabled>
           <svg viewBox="0 0 24 24"><polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg>
         </button>
@@ -908,7 +932,8 @@
         activeAssistant: null,
         pendingGeneration: null,
         lastCompletion: null,
-        defaultMaxTokens: 512
+        defaultMaxTokens: 512,
+        enableThinking: true
       }
 
       var els = {}
@@ -967,6 +992,7 @@
         els.modelLabel = byId('model-label')
         els.messages = byId('messages')
         els.promptInput = byId('prompt-input')
+        els.thinkingToggle = byId('thinking-toggle')
         els.primaryAction = byId('primary-action')
         // test (virtual — no UI panel, results reported via HTTP)
         els.testUi = null
@@ -1217,9 +1243,35 @@
         }
       }
 
+      function stripThinkTags(text) {
+        return text.replace(/<think>[\s\S]*?<\/think>/g, '').trim()
+      }
+
+      // Returns only the portion of streaming text safe to display,
+      // hiding any in-progress or completed <think> blocks.
+      function getVisibleText(raw) {
+        // Strip fully closed think blocks
+        var cleaned = raw.replace(/<think>[\s\S]*?<\/think>/g, '')
+        // If there's an unclosed <think>, hide everything from it onward
+        var openIdx = cleaned.lastIndexOf('<think>')
+        if (openIdx !== -1) {
+          cleaned = cleaned.substring(0, openIdx)
+        }
+        // Also hide partial opening tags being typed char by char (e.g. "<", "<t", "<th", etc.)
+        var tail = cleaned.slice(-7)
+        var partial = '<think>'
+        for (var pLen = 1; pLen < partial.length; pLen++) {
+          if (tail.endsWith(partial.substring(0, pLen))) {
+            cleaned = cleaned.substring(0, cleaned.length - pLen)
+            break
+          }
+        }
+        return cleaned.trim()
+      }
+
       function setMessageText(message, text) {
         message.content = text || ''
-        message.text.textContent = message.content
+        message.text.textContent = getVisibleText(message.content)
       }
 
       function setMessageStreaming(message, active) {
@@ -1251,7 +1303,7 @@
             applyCompletionMeta(state.activeAssistant, event)
           }
 
-          if (text) state.chatHistory.push({ role: 'assistant', content: text })
+          if (text) state.chatHistory.push({ role: 'assistant', content: stripThinkTags(text) })
 
           state.isGenerating = false
           state.lastCompletion = event
@@ -1475,8 +1527,11 @@
           }
 
           try {
+            console.log('[MLX-DBG] fetching descriptor...')
             var descriptor = await fetchMLXDescriptor()
+            console.log('[MLX-DBG] descriptor ok, files=' + (descriptor.metadata && descriptor.metadata.files ? JSON.parse(descriptor.metadata.files).length : 0) + ' size=' + descriptor.sizeBytes)
             await state.Serve.registerModel({ descriptor: descriptor })
+            console.log('[MLX-DBG] model registered')
 
             await state.Serve.addListener('sizeDisclosure', function (event) {
               if (event.modelId !== MLX_MODEL_ID) return
@@ -1507,7 +1562,7 @@
             failedHandle = await state.Serve.addListener('modelFailed', function (event) {
               if (event.modelId !== MLX_MODEL_ID) return
               cleanup()
-              var msg = (event.error && event.error.message) || 'Download failed'
+              var msg = (event.error && (event.error.detail || event.error.message)) || 'Download failed'
               setCardError('mlx', msg)
               reject(new Error(msg))
             })
@@ -1656,7 +1711,8 @@
             var templated = await state.LLM.applyTemplate({
               modelId: state.modelId,
               messages: state.chatHistory,
-              addGenerationPrompt: true
+              addGenerationPrompt: true,
+              enableThinking: state.enableThinking
             })
             if (templated && templated.prompt) return templated.prompt
           } catch (_e) {
@@ -1732,6 +1788,11 @@
       /* ─── Event binding ─────────────────────────────────────────────────── */
 
       function bindChatEvents() {
+        els.thinkingToggle.addEventListener('click', function () {
+          state.enableThinking = !state.enableThinking
+          els.thinkingToggle.classList.toggle('active', state.enableThinking)
+        })
+
         els.promptInput.addEventListener('input', function () {
           autoResizeTextarea()
           updatePrimaryAction()
