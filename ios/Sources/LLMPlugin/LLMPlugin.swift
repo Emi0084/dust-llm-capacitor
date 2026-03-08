@@ -2,10 +2,13 @@ import Capacitor
 import Foundation
 import DustCore
 @_exported import DustLlm
+import os.log
 #if canImport(ServePlugin)
 import ServePlugin
 #endif
 import UIKit
+
+private let pluginLog = OSLog(subsystem: "com.dust.llm", category: "LLMPlugin")
 
 @objc(LLMPlugin)
 public class LLMPlugin: CAPPlugin, CAPBridgedPlugin {
@@ -396,6 +399,19 @@ public class LLMPlugin: CAPPlugin, CAPBridgedPlugin {
 
         let stopSequences = (call.getArray("stopSequences") as? [String]) ?? []
         let sampler = Self.parseSampler(from: call.getObject("sampler"))
+        let rawMessages = call.getArray("messages")
+        os_log(.info, log: pluginLog, "streamGenerate – rawMessages type=%{public}@ count=%{public}d", String(describing: type(of: rawMessages)), rawMessages?.count ?? -1)
+        let messages: [[String: String]]? = (rawMessages as? [JSObject])?.compactMap { obj in
+            guard let role = obj["role"] as? String,
+                  let content = obj["content"] as? String else {
+                os_log(.error, log: pluginLog, "streamGenerate – message parse failed: %{public}@", String(describing: obj))
+                return nil
+            }
+            return ["role": role, "content": content]
+        }
+        os_log(.info, log: pluginLog, "streamGenerate – parsed messages=%{public}@, imageBase64=%{public}@",
+               messages != nil ? "\(messages!.count) msgs" : "nil",
+               call.getString("imageBase64") != nil ? "\(call.getString("imageBase64")!.count) chars" : "nil")
         let imageData: Data?
         do {
             imageData = try Self.decodeImageData(from: call.getString("imageBase64"))
@@ -427,6 +443,16 @@ public class LLMPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
+        notifyListeners("debugInfo", data: [
+            "event": "streamGenerate",
+            "hasImageData": imageData != nil,
+            "imageDataBytes": imageData?.count ?? 0,
+            "hasMessages": messages != nil,
+            "messageCount": messages?.count ?? 0,
+            "supportsNativeImage": session.metadata.hasVision,
+            "prompt": String(prompt.prefix(200)),
+        ])
+
         LLMSessionManager.inferenceQueue.async { [weak self] in
             guard let self else {
                 call.resolve()
@@ -436,6 +462,7 @@ public class LLMPlugin: CAPPlugin, CAPBridgedPlugin {
             session.streamGenerate(
                 prompt: prompt,
                 imageData: imageData,
+                messages: messages,
                 maxTokens: maxTokens,
                 stopSequences: stopSequences,
                 sampler: sampler,

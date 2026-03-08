@@ -116,6 +116,7 @@ export interface LLMPlugin {
     modelId: string
     prompt: string
     imageBase64?: string
+    messages?: ChatMessage[]
     maxTokens?: number
     stopSequences?: string[]
     sampler?: SamplerParams

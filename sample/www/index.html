@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
   />
   <title>LLM Sample</title>
   <style>
@@ -602,8 +602,6 @@
 
     #composer {
       display: flex;
-      align-items: flex-end;
-      gap: 10px;
       padding: 10px;
       border-radius: 1rem;
       border: 1px solid rgba(255, 255, 255, 0.10);
@@ -725,6 +723,91 @@
       50% { transform: scale(1.22); opacity: 1; }
     }
 
+    /* ─── Image attach ─────────────────────────────────────────────────────── */
+
+    #composer {
+      flex-direction: column;
+    }
+
+    #composer-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      width: 100%;
+    }
+
+    #image-attach-btn {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border: 0;
+      border-radius: 0.5rem;
+      background: transparent;
+      color: var(--muted-foreground);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: color 0.15s ease, background 0.15s ease;
+      cursor: pointer;
+    }
+
+    #image-attach-btn:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    #image-preview {
+      display: none;
+      padding: 0 4px 8px;
+    }
+
+    #image-preview.visible {
+      display: flex;
+    }
+
+    .image-preview-thumb {
+      position: relative;
+      width: 64px;
+      height: 64px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .image-preview-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    #image-remove-btn {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 0;
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      font-size: 12px;
+      line-height: 20px;
+      text-align: center;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .message-image {
+      max-width: 200px;
+      max-height: 200px;
+      border-radius: 12px;
+      margin-bottom: 8px;
+      display: block;
+    }
+
     /* ─── Responsive ───────────────────────────────────────────────────────── */
 
     @media (max-width: 640px) {
@@ -751,6 +834,8 @@
       #primary-action { min-width: 72px; padding: 0 14px; }
 
       .model-card { padding: 20px 16px; }
+
+      .message-image { max-width: 160px; max-height: 160px; }
     }
   </style>
 </head>
@@ -866,20 +951,32 @@
 
     <footer id="input-bar">
       <div id="composer">
-        <textarea
-          id="prompt-input"
-          rows="1"
-          placeholder="Ask something..."
-          disabled
-        ></textarea>
-        <button id="thinking-toggle" type="button" title="Toggle thinking" class="active">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-7 7c0 3 2 5.5 4 7h6c2-1.5 4-4 4-7a7 7 0 0 0-7-7z"/><line x1="10" y1="20" x2="14" y2="20"/><line x1="10" y1="23" x2="14" y2="23"/></svg>
-        </button>
-        <button id="primary-action" type="button" disabled>
-          <svg viewBox="0 0 24 24"><polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg>
-        </button>
+        <div id="image-preview">
+          <div class="image-preview-thumb">
+            <img id="image-preview-img" src="" alt="Preview" />
+            <button id="image-remove-btn" type="button" title="Remove image">&times;</button>
+          </div>
+        </div>
+        <div id="composer-row">
+          <textarea
+            id="prompt-input"
+            rows="1"
+            placeholder="Ask something..."
+            disabled
+          ></textarea>
+          <button id="image-attach-btn" type="button" title="Attach image" class="hidden">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          </button>
+          <button id="thinking-toggle" type="button" title="Toggle thinking" class="active">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-7 7c0 3 2 5.5 4 7h6c2-1.5 4-4 4-7a7 7 0 0 0-7-7z"/><line x1="10" y1="20" x2="14" y2="20"/><line x1="10" y1="23" x2="14" y2="23"/></svg>
+          </button>
+          <button id="primary-action" type="button" disabled>
+            <svg viewBox="0 0 24 24"><polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg>
+          </button>
+        </div>
       </div>
     </footer>
+    <input type="file" id="image-file-input" accept="image/*" style="display:none" />
   </div>
 
   <!-- Test UI removed — e2e tests interact over the chat directly -->
@@ -933,7 +1030,9 @@
         pendingGeneration: null,
         lastCompletion: null,
         defaultMaxTokens: 512,
-        enableThinking: true
+        enableThinking: true,
+        attachedImageBase64: null,
+        attachedImageDataUrl: null
       }
 
       var els = {}
@@ -994,6 +1093,11 @@
         els.promptInput = byId('prompt-input')
         els.thinkingToggle = byId('thinking-toggle')
         els.primaryAction = byId('primary-action')
+        els.imageAttachBtn = byId('image-attach-btn')
+        els.imagePreview = byId('image-preview')
+        els.imagePreviewImg = byId('image-preview-img')
+        els.imageRemoveBtn = byId('image-remove-btn')
+        els.imageFileInput = byId('image-file-input')
         // test (virtual — no UI panel, results reported via HTTP)
         els.testUi = null
         els.testStatus = null
@@ -1152,6 +1256,28 @@
         els.promptInput.style.height = nextHeight + 'px'
       }
 
+      function attachImage(file) {
+        var reader = new FileReader()
+        reader.onload = function (e) {
+          var dataUrl = e.target.result
+          state.attachedImageDataUrl = dataUrl
+          state.attachedImageBase64 = dataUrl.split(',')[1]
+          els.imagePreviewImg.src = dataUrl
+          els.imagePreview.classList.add('visible')
+          updatePrimaryAction()
+        }
+        reader.readAsDataURL(file)
+      }
+
+      function clearAttachedImage() {
+        state.attachedImageBase64 = null
+        state.attachedImageDataUrl = null
+        els.imagePreviewImg.src = ''
+        els.imagePreview.classList.remove('visible')
+        els.imageFileInput.value = ''
+        updatePrimaryAction()
+      }
+
       function scrollMessages() {
         requestAnimationFrame(function () {
           els.messages.scrollTop = els.messages.scrollHeight
@@ -1162,7 +1288,7 @@
       var STOP_ICON = '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>'
 
       function updatePrimaryAction() {
-        var hasPrompt = els.promptInput.value.trim().length > 0
+        var hasPrompt = els.promptInput.value.trim().length > 0 || !!state.attachedImageBase64
         if (state.isGenerating) {
           els.primaryAction.innerHTML = STOP_ICON
           els.primaryAction.classList.add('stop')
@@ -1203,7 +1329,7 @@
         addMetaBadge(message, errorText, 'error')
       }
 
-      function addMessage(role, text) {
+      function addMessage(role, text, imageDataUrl) {
         // Remove welcome state on first message
         var welcome = document.getElementById('welcome-state')
         if (welcome) welcome.remove()
@@ -1216,6 +1342,14 @@
 
         var body = document.createElement('div')
         body.className = 'message-body'
+
+        if (imageDataUrl) {
+          var img = document.createElement('img')
+          img.className = 'message-image'
+          img.src = imageDataUrl
+          img.alt = 'Attached image'
+          body.appendChild(img)
+        }
 
         var textSpan = document.createElement('span')
         textSpan.className = 'message-text'
@@ -1282,6 +1416,9 @@
 
       async function ensureListeners() {
         if (state.listenersAttached || !state.LLM) return
+        await state.LLM.addListener('debugInfo', function (event) {
+          console.log('[DUST-DEBUG]', JSON.stringify(event))
+        })
         await state.LLM.addListener('inferenceToken', function (event) {
           if (event.modelId !== state.modelId || !state.activeAssistant) return
           setMessageText(state.activeAssistant, state.activeAssistant.content + event.token)
@@ -1620,6 +1757,9 @@
         setModelLabel(state.metadata.name || state.modelId)
         setComposerEnabled(true)
         setStatus('ready', 'Ready')
+        if (state.metadata && state.metadata.hasVision) {
+          els.imageAttachBtn.classList.remove('hidden')
+        }
 
         // Show welcome state now that model is actually loaded
         var welcome = document.getElementById('welcome-state')
@@ -1691,6 +1831,9 @@
           setModelLabel(state.metadata.name || state.modelId)
           setComposerEnabled(true)
           setStatus('ready', 'Ready')
+          if (state.metadata && state.metadata.hasVision) {
+            els.imageAttachBtn.classList.remove('hidden')
+          }
 
           // Show welcome state now that model is actually loaded
           var welcome = document.getElementById('welcome-state')
@@ -1734,16 +1877,19 @@
         if (state.isGenerating) throw new Error('Generation already in progress')
 
         var messageText = (prompt == null ? els.promptInput.value : prompt).trim()
-        if (!messageText) return null
+        var imageBase64 = state.attachedImageBase64
+        var imageDataUrl = state.attachedImageDataUrl
+        if (!messageText && !imageBase64) return null
 
-        var userMessage = addMessage('user', messageText)
+        var userMessage = addMessage('user', messageText, imageDataUrl)
         clearMessageMeta(userMessage)
-        state.chatHistory.push({ role: 'user', content: messageText })
+        state.chatHistory.push({ role: 'user', content: messageText || 'Describe this image.' })
 
         if (prompt == null || options.clearInput !== false) {
           els.promptInput.value = ''
           autoResizeTextarea()
         }
+        clearAttachedImage()
 
         state.activeAssistant = addMessage('assistant', '')
         setMessageStreaming(state.activeAssistant, true)
@@ -1757,13 +1903,18 @@
 
         try {
           var compiledPrompt = await buildPrompt()
-          await state.LLM.streamGenerate({
+          var generateOpts = {
             modelId: state.modelId,
             prompt: compiledPrompt,
             maxTokens: options.maxTokens || state.defaultMaxTokens,
             stopSequences: options.stopSequences || ['<|im_end|>'],
             sampler: options.sampler || { temperature: 0.7, topP: 0.9 }
-          })
+          }
+          if (imageBase64) {
+            generateOpts.imageBase64 = imageBase64
+            generateOpts.messages = state.chatHistory.slice()
+          }
+          await state.LLM.streamGenerate(generateOpts)
         } catch (error) {
           handleGenerationFailure(error.message || 'Inference failed')
           throw error
@@ -1813,6 +1964,19 @@
             return
           }
           sendPrompt().catch(function (e) { console.error('sendPrompt failed:', e) })
+        })
+
+        els.imageAttachBtn.addEventListener('click', function () {
+          els.imageFileInput.click()
+        })
+
+        els.imageFileInput.addEventListener('change', function () {
+          var file = els.imageFileInput.files[0]
+          if (file) attachImage(file)
+        })
+
+        els.imageRemoveBtn.addEventListener('click', function () {
+          clearAttachedImage()
         })
       }
 
@@ -1951,6 +2115,9 @@
           setModelLabel(state.metadata.name || state.modelId)
           setComposerEnabled(true)
           setStatus('ready', 'Ready')
+          if (state.metadata && state.metadata.hasVision) {
+            els.imageAttachBtn.classList.remove('hidden')
+          }
 
           var isAndroid = MODEL_PATH.indexOf('/data/local/tmp/') === 0
           state.defaultMaxTokens = isAndroid ? 16 : 512
