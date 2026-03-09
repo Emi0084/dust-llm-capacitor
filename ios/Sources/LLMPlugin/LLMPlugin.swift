@@ -37,7 +37,7 @@ public class LLMPlugin: CAPPlugin, CAPBridgedPlugin {
         super.load()
         #if canImport(ServePlugin)
         if let servePlugin = bridge?.plugin(withName: "Serve") as? ServePlugin {
-            servePlugin.setSessionFactory(sessionManager)
+            servePlugin.setSessionFactory(sessionManager, for: DustModelFormat.gguf.rawValue)
         }
         #endif
         NotificationCenter.default.addObserver(
